@@ -1,11 +1,19 @@
 import { BlockGrid } from "./grid.js";
 import { Ball, BALL_TYPES } from "./balls.js";
+import { valueNoise2D } from "./rng.js";
 import { D, formatInt } from "./numbers.js";
 import {
+  addClears,
   addPoints,
   canAfford,
+  canAffordClears,
   clearPlayerSaveFromStorage,
+  CLEARS_SHOP_CONFIG,
   createDefaultPlayer,
+  ensureClearsUpgrades,
+  ensureGenerationSettings,
+  getDensityUpgradeCost,
+  getDensityUpgradeLevel,
   getBallBuyCost,
   getBallCap,
   ensureBallTypeState,
@@ -14,6 +22,9 @@ import {
   getCursorUpgradeCost,
   getBallDamageMultiplier,
   getBallDamageUpgradeCost,
+  getClears,
+  getGridSizeUpgradeCost,
+  getGridSizeUpgradeLevel,
   getPoints,
   getBallSpeedMultiplier,
   getBallSpeedUpgradeCost,
@@ -23,11 +34,28 @@ import {
   loadPlayerFromStorage,
   normalizePlayer,
   savePlayerToStorage,
+  trySpendClears,
   trySpendPoints,
 } from "./player.js";
 
 function clamp(v, lo, hi) {
   return v < lo ? lo : v > hi ? hi : v;
+}
+
+function getNoiseThresholdForMaxFill({ cols, rows, seed, noiseScale, maxFillRatio }) {
+  const count = Math.max(1, (cols | 0) * (rows | 0));
+  const values = new Float32Array(count);
+  let i = 0;
+
+  for (let row = 0; row < rows; row++) {
+    for (let col = 0; col < cols; col++) {
+      values[i++] = clamp(valueNoise2D(col * noiseScale, row * noiseScale, seed), 0, 1);
+    }
+  }
+
+  values.sort();
+  const idx = clamp(Math.ceil(values.length * (1 - maxFillRatio)), 0, values.length - 1);
+  return values[idx];
 }
 
 function updateCanvasView(canvas, world, view) {
@@ -80,9 +108,22 @@ function main() {
   const saveBtn = document.querySelector("#save-btn");
   const loadBtn = document.querySelector("#load-btn");
   const hardResetBtn = document.querySelector("#hard-reset-btn");
+  const clearsShopBtn = document.querySelector("#clears-shop-btn");
+  const prestigeBtn = document.querySelector("#prestige-btn");
   const hudLevelEl = document.querySelector("#hud-level");
   const cursorUpgradeBtn = document.querySelector("#cursor-upgrade-btn");
   const statsEl = document.querySelector("#stats");
+
+  const clearsShopModal = document.querySelector("#clears-shop-modal");
+  const clearsShopCloseBtn = document.querySelector("#clears-shop-close");
+  const clearsShopBalanceEl = document.querySelector("#clears-shop-balance");
+  const clearsDensityLvlEl = document.querySelector("#clears-density-lvl");
+  const clearsDensityCostEl = document.querySelector("#clears-density-cost");
+  const clearsDensityBuyBtn = document.querySelector("#clears-density-buy");
+  const clearsGridLvlEl = document.querySelector("#clears-grid-lvl");
+  const clearsGridCostEl = document.querySelector("#clears-grid-cost");
+  const clearsGridBuyBtn = document.querySelector("#clears-grid-buy");
+  const clearsGridInfoEl = document.querySelector("#clears-grid-info");
 
   if (!canvas) throw new Error("Missing #game-canvas");
   const ctx = canvas.getContext("2d");
@@ -101,10 +142,7 @@ function main() {
   world.width = worldSize;
   world.height = worldSize;
 
-  const desiredCellSize = 56;
-  const cols = Math.max(4, Math.round(world.width / desiredCellSize));
-  const cellSize = world.width / cols;
-  const grid = new BlockGrid({ cellSize, cols, rows: cols });
+  const grid = new BlockGrid({ cellSize: 56, cols: 10, rows: 10 });
 
   const state = {
     uiMessage: null,
@@ -115,6 +153,8 @@ function main() {
   let player = loadPlayerFromStorage() ?? createDefaultPlayer();
   player = normalizePlayer(player);
   ensureCursorState(player);
+  ensureGenerationSettings(player);
+  ensureClearsUpgrades(player);
   window.player = player;
 
   const game = {
@@ -125,6 +165,27 @@ function main() {
   const ui = {
     ballCards: new Map(),
   };
+
+  function updateGridFromPlayer() {
+    ensureGenerationSettings(player);
+    ensureClearsUpgrades(player);
+
+    const desiredCellSize = player.generation.desiredCellSize;
+    const baseCols = Math.max(4, Math.round(world.width / desiredCellSize));
+    const maxCols = CLEARS_SHOP_CONFIG.gridSize.maxCellsPerAxis;
+    const maxLevel = CLEARS_SHOP_CONFIG.gridSize.maxLevel;
+    const level = player.clearsUpgrades.gridSizeLevel;
+
+    const baseColsClamped = Math.min(baseCols, maxCols);
+    const t = maxLevel > 0 ? clamp(level / maxLevel, 0, 1) : 0;
+    const cols = clamp(Math.round(baseColsClamped + (maxCols - baseColsClamped) * t), 4, maxCols);
+
+    const cellSize = world.width / cols;
+    grid.cellSize = cellSize;
+    grid.resize(cols, cols);
+    grid.originX = 0;
+    grid.originY = 0;
+  }
 
   function applyUpgradesToAllBalls() {
     const speedMultByType = {};
@@ -199,12 +260,28 @@ function main() {
 
     const level = player.progress.level;
     const seed = (player.progress.masterSeed + level) >>> 0;
-    const noiseThreshold = 0.65; // 0..1 : higher => more holes (fewer blocks)
+
+    updateGridFromPlayer();
+    const baseThreshold = player.generation.noiseThreshold;
+    const densityLevel = getDensityUpgradeLevel(player);
+    const step = CLEARS_SHOP_CONFIG.density.thresholdStep;
+    const minThreshold = CLEARS_SHOP_CONFIG.density.minNoiseThreshold;
+    const desiredThreshold = clamp(baseThreshold - densityLevel * step, minThreshold, 1);
+
+    const noiseScale = 0.28;
+    const capThreshold = getNoiseThresholdForMaxFill({
+      cols: grid.cols,
+      rows: grid.rows,
+      seed,
+      noiseScale,
+      maxFillRatio: CLEARS_SHOP_CONFIG.density.maxFillRatio,
+    });
+    const noiseThreshold = Math.max(desiredThreshold, capThreshold);
 
     grid.generate({
       pattern: "noise",
       seed,
-      noiseScale: 0.28,
+      noiseScale,
       noiseThreshold,
       hpMin: level,
       hpMax: level,
@@ -257,6 +334,8 @@ function main() {
   function savePlayerNow({ silent = false } = {}) {
     player.game.balls = game.balls.map((b) => b.toJSONData());
     player = savePlayerToStorage(player);
+    ensureGenerationSettings(player);
+    ensureClearsUpgrades(player);
     window.player = player;
     if (!silent) setMessage("Saved");
   }
@@ -270,6 +349,9 @@ function main() {
 
     player = normalizePlayer(loaded);
     ensureCursorState(player);
+    ensureGenerationSettings(player);
+    ensureClearsUpgrades(player);
+    updateGridFromPlayer();
     window.player = player;
 
     game.balls = (player.game.balls ?? []).map(Ball.fromJSONData).filter(Boolean);
@@ -293,12 +375,62 @@ function main() {
     clearPlayerSaveFromStorage();
     player = normalizePlayer(createDefaultPlayer());
     ensureCursorState(player);
+    ensureGenerationSettings(player);
+    ensureClearsUpgrades(player);
+    updateGridFromPlayer();
     window.player = player;
     game.balls = [];
     regenerate({ reseed: true });
     spawnBallAt(world.width * 0.5, world.height * 0.85, "normal", { free: true });
     applyUpgradesToAllBalls();
     setMessage("Reset complete");
+  }
+
+  function prestigeNow() {
+    const ok = window.confirm(
+      "Prestige will reset your balls and upgrades, and convert buffered clears into clears.\n\nContinue?"
+    );
+    if (!ok) return;
+
+    const buffered = Math.max(0, (player.clearsBuffered ?? 0) | 0);
+    if (buffered > 0) addClears(player, D(buffered));
+    player.clearsBuffered = 0;
+    ensureClearsUpgrades(player);
+
+    player.ballTypes = {};
+    ensureCursorState(player).level = 0;
+    game.balls = [];
+
+    ensureProgress();
+    player.progress.level = 1;
+    updateGridFromPlayer();
+    regenerate();
+    spawnBallAt(world.width * 0.5, world.height * 0.85, "normal", { free: true });
+    applyUpgradesToAllBalls();
+
+    window.player = player;
+    setMessage("Prestiged");
+  }
+
+  function openClearsShop() {
+    if (!clearsShopModal) return;
+    clearsShopModal.classList.remove("hidden");
+    clearsShopModal.setAttribute("aria-hidden", "false");
+  }
+
+  function closeClearsShop() {
+    if (!clearsShopModal) return;
+    clearsShopModal.classList.add("hidden");
+    clearsShopModal.setAttribute("aria-hidden", "true");
+  }
+
+  function getMaxDensityLevel() {
+    ensureGenerationSettings(player);
+    const baseThreshold = player.generation.noiseThreshold;
+    const step = CLEARS_SHOP_CONFIG.density.thresholdStep;
+    const minThreshold = CLEARS_SHOP_CONFIG.density.minNoiseThreshold;
+    if (step <= 0) return 0;
+    return Math.max(0, Math.floor((baseThreshold - minThreshold) / step));
   }
 
   function ensureBallCard(typeId) {
@@ -401,11 +533,46 @@ function main() {
   saveBtn?.addEventListener("click", savePlayerNow);
   loadBtn?.addEventListener("click", loadPlayerNow);
   hardResetBtn?.addEventListener("click", hardResetNow);
+  clearsShopBtn?.addEventListener("click", openClearsShop);
+  prestigeBtn?.addEventListener("click", prestigeNow);
   cursorUpgradeBtn?.addEventListener("click", () => {
     const cost = getCursorUpgradeCost(player);
     if (!trySpendPoints(player, cost)) return setMessage(`Need ${formatInt(cost)}`);
     ensureCursorState(player).level += 1;
     setMessage(`Cursor damage upgraded`);
+  });
+  clearsShopCloseBtn?.addEventListener("click", closeClearsShop);
+  clearsShopModal?.addEventListener("click", (e) => {
+    const target = e.target;
+    if (target?.dataset?.action === "close") closeClearsShop();
+  });
+  window.addEventListener("keydown", (e) => {
+    if (e.key === "Escape") closeClearsShop();
+  });
+  clearsDensityBuyBtn?.addEventListener("click", () => {
+    ensureClearsUpgrades(player);
+    const level = getDensityUpgradeLevel(player);
+    const maxLevel = getMaxDensityLevel();
+    if (level >= maxLevel) return;
+
+    const cost = getDensityUpgradeCost(player);
+    if (!trySpendClears(player, cost)) return setMessage(`Need ${formatInt(cost)} clears`);
+    player.clearsUpgrades.densityLevel += 1;
+    regenerate();
+    setMessage("Grid density upgraded");
+  });
+  clearsGridBuyBtn?.addEventListener("click", () => {
+    ensureClearsUpgrades(player);
+    const level = getGridSizeUpgradeLevel(player);
+    const maxLevel = CLEARS_SHOP_CONFIG.gridSize.maxLevel;
+    if (level >= maxLevel) return;
+
+    const cost = getGridSizeUpgradeCost(player);
+    if (!trySpendClears(player, cost)) return setMessage(`Need ${formatInt(cost)} clears`);
+    player.clearsUpgrades.gridSizeLevel += 1;
+    updateGridFromPlayer();
+    regenerate();
+    setMessage("Grid size upgraded");
   });
   window.addEventListener("beforeunload", () => savePlayerNow({ silent: true }));
 
@@ -433,6 +600,7 @@ function main() {
   initBallShopUI();
 
   ensureProgress();
+  updateGridFromPlayer();
   regenerate();
 
   game.balls = (player.game.balls ?? []).map(Ball.fromJSONData).filter(Boolean);
@@ -467,9 +635,10 @@ function main() {
     if (aliveBlocks === 0) {
       ensureProgress();
       player.progress.level += 1;
+      player.clearsBuffered = Math.max(0, (player.clearsBuffered ?? 0) | 0) + 1;
       regenerate();
       aliveBlocks = countAliveBlocks(grid);
-      setMessage(`Level ${player.progress.level}`);
+      setMessage(`Level ${player.progress.level} (+1 clear buffered)`);
     }
 
     ctx.setTransform(1, 0, 0, 1, 0, 0);
@@ -570,6 +739,38 @@ function main() {
       cursorUpgradeBtn.disabled = !canAfford(player, cost);
     }
 
+    const clearsNow = getClears(player);
+    if (clearsShopBtn) clearsShopBtn.textContent = `Clears Shop (${formatInt(clearsNow)})`;
+    if (clearsShopBalanceEl) {
+      const buffered = Math.max(0, (player.clearsBuffered ?? 0) | 0);
+      clearsShopBalanceEl.textContent = `Clears: ${formatInt(clearsNow)} (buffer +${buffered})`;
+    }
+    if (clearsDensityLvlEl && clearsDensityCostEl && clearsDensityBuyBtn) {
+      const level = getDensityUpgradeLevel(player);
+      const maxLevel = getMaxDensityLevel();
+      const cost = getDensityUpgradeCost(player);
+      clearsDensityLvlEl.textContent = String(level + 1);
+      clearsDensityCostEl.textContent = `(${formatInt(cost)})`;
+      clearsDensityBuyBtn.disabled = level >= maxLevel || !canAffordClears(player, cost);
+    }
+    if (clearsGridLvlEl && clearsGridCostEl && clearsGridBuyBtn) {
+      const level = getGridSizeUpgradeLevel(player);
+      const maxLevel = CLEARS_SHOP_CONFIG.gridSize.maxLevel;
+      const maxCols = CLEARS_SHOP_CONFIG.gridSize.maxCellsPerAxis;
+      const cost = getGridSizeUpgradeCost(player);
+
+      const desiredCellSize = player.generation?.desiredCellSize ?? 56;
+      const baseCols = Math.max(4, Math.round(world.width / desiredCellSize));
+      const baseColsClamped = Math.min(baseCols, maxCols);
+      const t = maxLevel > 0 ? clamp(level / maxLevel, 0, 1) : 0;
+      const cols = clamp(Math.round(baseColsClamped + (maxCols - baseColsClamped) * t), 4, maxCols);
+
+      clearsGridLvlEl.textContent = String(level + 1);
+      clearsGridCostEl.textContent = `(${formatInt(cost)})`;
+      clearsGridBuyBtn.disabled = level >= maxLevel || !canAffordClears(player, cost);
+      if (clearsGridInfoEl) clearsGridInfoEl.textContent = `Cells per axis: ${cols}/${maxCols}`;
+    }
+
     if (statsEl) {
       const msg = performance.now() < state.uiMessageUntil ? ` | ${state.uiMessage}` : "";
       const level = player.progress?.level ?? 1;
@@ -578,7 +779,9 @@ function main() {
 
     if (hudLevelEl) {
       const level = player.progress?.level ?? 1;
-      hudLevelEl.textContent = `Level ${level} | Bricks ${aliveBlocks}/${state.initialBlocks}`;
+      const clears = formatInt(getClears(player));
+      const buffered = Math.max(0, (player.clearsBuffered ?? 0) | 0);
+      hudLevelEl.textContent = `Level ${level} | Bricks ${aliveBlocks}/${state.initialBlocks} | Clears ${clears} (+${buffered})`;
     }
 
     requestAnimationFrame(frame);

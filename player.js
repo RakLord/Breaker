@@ -10,13 +10,39 @@ export const BALL_SHOP_CONFIG = {
   sweeper: { cap: 5, baseCost: D(1500), costGrowth: D(1.24) },
 };
 
+export const CLEARS_SHOP_CONFIG = {
+  density: {
+    thresholdStep: 0.02,
+    minNoiseThreshold: 0.1,
+    maxFillRatio: 0.9,
+    baseCost: D(1),
+    costGrowth: D(2),
+  },
+  gridSize: {
+    maxLevel: 100,
+    maxCellsPerAxis: 100,
+    baseCost: D(1),
+    costGrowth: D(1.35),
+  },
+};
+
 export function createDefaultPlayer() {
   return {
     version: SAVE_VERSION,
     points: "0",
+    clears: "0",
+    clearsBuffered: 0,
+    clearsUpgrades: {
+      densityLevel: 0,
+      gridSizeLevel: 0,
+    },
     ballTypes: {},
     cursor: {
       level: 0,
+    },
+    generation: {
+      noiseThreshold: 0.65,
+      desiredCellSize: 56,
     },
     progress: {
       level: 1,
@@ -42,6 +68,12 @@ export function normalizePlayer(raw) {
 
   const version = Number.isFinite(raw.version) ? raw.version : SAVE_VERSION;
   const points = typeof raw.points === "string" || typeof raw.points === "number" ? String(raw.points) : "0";
+  const clears = typeof raw.clears === "string" || typeof raw.clears === "number" ? String(raw.clears) : "0";
+  const clearsBuffered = Math.max(0, (raw.clearsBuffered ?? 0) | 0);
+
+  const rawClearsUpgrades = raw.clearsUpgrades && typeof raw.clearsUpgrades === "object" ? raw.clearsUpgrades : {};
+  const densityLevel = Math.max(0, (rawClearsUpgrades.densityLevel ?? 0) | 0);
+  const gridSizeLevel = Math.max(0, (rawClearsUpgrades.gridSizeLevel ?? 0) | 0);
 
   const rawBallTypes = raw.ballTypes && typeof raw.ballTypes === "object" ? raw.ballTypes : {};
   const legacyUpgrades = raw.upgrades && typeof raw.upgrades === "object" ? raw.upgrades : null;
@@ -65,6 +97,10 @@ export function normalizePlayer(raw) {
 
   const rawCursor = raw.cursor && typeof raw.cursor === "object" ? raw.cursor : {};
   const cursorLevel = Math.max(0, (rawCursor.level ?? 0) | 0);
+
+  const rawGen = raw.generation && typeof raw.generation === "object" ? raw.generation : {};
+  const noiseThreshold = Number.isFinite(rawGen.noiseThreshold) ? rawGen.noiseThreshold : base.generation.noiseThreshold;
+  const desiredCellSize = Number.isFinite(rawGen.desiredCellSize) ? rawGen.desiredCellSize : base.generation.desiredCellSize;
 
   const map = raw.map && typeof raw.map === "object" ? raw.map : {};
   const pattern = typeof map.pattern === "string" ? map.pattern : base.map.pattern;
@@ -91,8 +127,15 @@ export function normalizePlayer(raw) {
   return {
     version,
     points,
+    clears,
+    clearsBuffered,
+    clearsUpgrades: { densityLevel, gridSizeLevel },
     ballTypes,
     cursor: { level: cursorLevel },
+    generation: {
+      noiseThreshold,
+      desiredCellSize,
+    },
     progress: { level, masterSeed },
     map: { pattern, seed },
     game: { balls },
@@ -102,6 +145,18 @@ export function normalizePlayer(raw) {
 
 export function getPoints(player) {
   return D(player.points ?? "0");
+}
+
+export function getClears(player) {
+  return D(player.clears ?? "0");
+}
+
+export function setClears(player, clearsDecimal) {
+  player.clears = clearsDecimal.toString();
+}
+
+export function addClears(player, deltaDecimal) {
+  setClears(player, getClears(player).add(deltaDecimal));
 }
 
 export function setPoints(player, pointsDecimal) {
@@ -116,10 +171,53 @@ export function canAfford(player, costDecimal) {
   return getPoints(player).gte(costDecimal);
 }
 
+export function canAffordClears(player, costDecimal) {
+  return getClears(player).gte(costDecimal);
+}
+
 export function trySpendPoints(player, costDecimal) {
   if (!canAfford(player, costDecimal)) return false;
   setPoints(player, getPoints(player).sub(costDecimal));
   return true;
+}
+
+export function trySpendClears(player, costDecimal) {
+  if (!canAffordClears(player, costDecimal)) return false;
+  setClears(player, getClears(player).sub(costDecimal));
+  return true;
+}
+
+export function ensureClearsUpgrades(player) {
+  if (!player.clearsUpgrades || typeof player.clearsUpgrades !== "object") {
+    player.clearsUpgrades = { densityLevel: 0, gridSizeLevel: 0 };
+  }
+  player.clearsUpgrades.densityLevel = Math.max(0, (player.clearsUpgrades.densityLevel ?? 0) | 0);
+  player.clearsUpgrades.gridSizeLevel = Math.max(0, (player.clearsUpgrades.gridSizeLevel ?? 0) | 0);
+  player.clearsUpgrades.gridSizeLevel = Math.min(
+    CLEARS_SHOP_CONFIG.gridSize.maxLevel,
+    player.clearsUpgrades.gridSizeLevel
+  );
+  return player.clearsUpgrades;
+}
+
+export function getDensityUpgradeLevel(player) {
+  return ensureClearsUpgrades(player).densityLevel;
+}
+
+export function getDensityUpgradeCost(player) {
+  const level = getDensityUpgradeLevel(player);
+  const cfg = CLEARS_SHOP_CONFIG.density;
+  return cfg.baseCost.mul(cfg.costGrowth.pow(level));
+}
+
+export function getGridSizeUpgradeLevel(player) {
+  return ensureClearsUpgrades(player).gridSizeLevel;
+}
+
+export function getGridSizeUpgradeCost(player) {
+  const level = getGridSizeUpgradeLevel(player);
+  const cfg = CLEARS_SHOP_CONFIG.gridSize;
+  return cfg.baseCost.mul(cfg.costGrowth.pow(level));
 }
 
 export function ensureBallTypeState(player, typeId) {
@@ -217,4 +315,16 @@ export function loadPlayerFromStorage() {
 
 export function clearPlayerSaveFromStorage() {
   localStorage.removeItem(SAVE_KEY);
+}
+
+export function ensureGenerationSettings(player) {
+  if (!player.generation || typeof player.generation !== "object") {
+    player.generation = { noiseThreshold: 0.65, desiredCellSize: 56 };
+  }
+  if (!Number.isFinite(player.generation.noiseThreshold)) player.generation.noiseThreshold = 0.65;
+  player.generation.noiseThreshold = Math.max(0, Math.min(1, player.generation.noiseThreshold));
+
+  if (!Number.isFinite(player.generation.desiredCellSize)) player.generation.desiredCellSize = 56;
+  player.generation.desiredCellSize = Math.max(8, player.generation.desiredCellSize);
+  return player.generation;
 }

@@ -30,11 +30,51 @@
               <button id="save-btn" type="button">Save</button>
               <button id="load-btn" type="button">Load</button>
               <button id="hard-reset-btn" type="button">Hard Reset</button>
+              <button id="clears-shop-btn" type="button">Clears Shop</button>
+              <button id="prestige-btn" type="button">Prestige</button>
               <div id="stats"></div>
             </div>
           </div>
 
           <canvas id="game-canvas"></canvas>
+
+          <div id="clears-shop-modal" class="modal hidden" aria-hidden="true">
+            <div class="modal-backdrop" data-action="close"></div>
+            <div class="modal-panel" role="dialog" aria-modal="true" aria-labelledby="clears-shop-title">
+              <div class="modal-header">
+                <div id="clears-shop-title" class="modal-title">Clears Shop</div>
+                <button id="clears-shop-close" type="button" class="modal-close" aria-label="Close">X</button>
+              </div>
+              <div class="modal-body">
+                <div id="clears-shop-balance"></div>
+
+                <div class="modal-upgrade">
+                  <div class="modal-upgrade-title">Grid Density</div>
+                  <div class="modal-upgrade-sub">Decreases the noise spawn threshold (more blocks). Capped at 90% filled.</div>
+                  <div class="upgrade-row">
+                    <div class="upgrade-level">Lv <span id="clears-density-lvl">1</span></div>
+                    <button id="clears-density-buy" type="button">
+                      <span class="btn-label">Buy</span>
+                      <span class="btn-cost" id="clears-density-cost">(0)</span>
+                    </button>
+                  </div>
+                </div>
+
+                <div class="modal-upgrade">
+                  <div class="modal-upgrade-title">Smaller Cells</div>
+                  <div class="modal-upgrade-sub">Decreases cell size to fit more cells per row/column.</div>
+                  <div class="upgrade-row">
+                    <div class="upgrade-level">Lv <span id="clears-grid-lvl">1</span></div>
+                    <button id="clears-grid-buy" type="button">
+                      <span class="btn-label">Buy</span>
+                      <span class="btn-cost" id="clears-grid-cost">(0)</span>
+                    </button>
+                  </div>
+                  <div class="modal-upgrade-sub" id="clears-grid-info"></div>
+                </div>
+              </div>
+            </div>
+          </div>
         </section>
       </main>
     </div>
