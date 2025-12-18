@@ -292,6 +292,20 @@ function main() {
     state.initialBlocks = countAliveBlocks(grid);
   }
 
+  function tryRestoreGridFromPlayerSave() {
+    const saved = player?.game?.grid;
+    if (!saved) return false;
+
+    const maxAxis = CLEARS_SHOP_CONFIG.gridSize.maxCellsPerAxis ?? 100;
+    const ok = grid.applyJSONData(saved, { maxCols: maxAxis, maxRows: maxAxis, maxCells: maxAxis * maxAxis });
+    if (!ok) return false;
+
+    const savedInitial = player?.game?.initialBlocks;
+    state.initialBlocks = Math.max(0, (savedInitial ?? 0) | 0);
+    if (state.initialBlocks <= 0) state.initialBlocks = countAliveBlocks(grid);
+    return true;
+  }
+
   function spawnBallAt(x, y, typeId, { free = false } = {}) {
     const ownedCount = game.balls.reduce((acc, b) => acc + (b.typeId === typeId ? 1 : 0), 0);
     const cap = getBallCap(typeId);
@@ -333,6 +347,8 @@ function main() {
 
   function savePlayerNow({ silent = false } = {}) {
     player.game.balls = game.balls.map((b) => b.toJSONData());
+    player.game.grid = grid.toJSONData();
+    player.game.initialBlocks = state.initialBlocks;
     player = savePlayerToStorage(player);
     ensureGenerationSettings(player);
     ensureClearsUpgrades(player);
@@ -355,11 +371,8 @@ function main() {
     window.player = player;
 
     game.balls = (player.game.balls ?? []).map(Ball.fromJSONData).filter(Boolean);
-
-    regenerate();
-    if (game.balls.length === 0) {
-      spawnBallAt(world.width * 0.5, world.height * 0.85, "normal", { free: true });
-    }
+    if (!tryRestoreGridFromPlayerSave()) regenerate();
+    if (game.balls.length === 0) spawnBallAt(world.width * 0.5, world.height * 0.85, "normal", { free: true });
     applyUpgradesToAllBalls();
 
     setMessage("Loaded");
@@ -601,7 +614,7 @@ function main() {
 
   ensureProgress();
   updateGridFromPlayer();
-  regenerate();
+  if (!tryRestoreGridFromPlayerSave()) regenerate();
 
   game.balls = (player.game.balls ?? []).map(Ball.fromJSONData).filter(Boolean);
   if (game.balls.length === 0) {

@@ -37,6 +37,51 @@ export class BlockGrid {
     this.resize(cols ?? 10, rows ?? 10);
   }
 
+  toJSONData() {
+    return {
+      cols: this.cols,
+      rows: this.rows,
+      cellSize: this.cellSize,
+      originX: this.originX,
+      originY: this.originY,
+      hp: Array.from(this.hp),
+      maxHp: Array.from(this.maxHp),
+    };
+  }
+
+  applyJSONData(raw, { maxCols = 200, maxRows = 200, maxCells = 40000 } = {}) {
+    if (!raw || typeof raw !== "object") return false;
+
+    const cols = Math.max(1, raw.cols | 0);
+    const rows = Math.max(1, raw.rows | 0);
+    const size = cols * rows;
+    if (cols > maxCols || rows > maxRows || size > maxCells) return false;
+
+    const hp = Array.isArray(raw.hp) ? raw.hp : null;
+    const maxHp = Array.isArray(raw.maxHp) ? raw.maxHp : null;
+    if (!hp || !maxHp || hp.length !== size || maxHp.length !== size) return false;
+
+    const cellSize = Number.isFinite(raw.cellSize) ? raw.cellSize : this.cellSize;
+    if (Number.isFinite(cellSize) && cellSize > 0) this.cellSize = cellSize;
+
+    const originX = Number.isFinite(raw.originX) ? raw.originX : this.originX;
+    const originY = Number.isFinite(raw.originY) ? raw.originY : this.originY;
+    if (Number.isFinite(originX)) this.originX = originX;
+    if (Number.isFinite(originY)) this.originY = originY;
+
+    this.resize(cols, rows);
+    for (let i = 0; i < size; i++) {
+      const h = Number(hp[i]);
+      const mh = Number(maxHp[i]);
+      const safeHp = Number.isFinite(h) ? Math.max(0, h) : 0;
+      const safeMaxHp = Number.isFinite(mh) ? Math.max(safeHp, mh) : safeHp;
+      this.hp[i] = safeHp;
+      this.maxHp[i] = safeMaxHp;
+    }
+
+    return true;
+  }
+
   resize(cols, rows) {
     const nextCols = Math.max(1, cols | 0);
     const nextRows = Math.max(1, rows | 0);

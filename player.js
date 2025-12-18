@@ -54,11 +54,52 @@ export function createDefaultPlayer() {
     },
     game: {
       balls: [],
+      grid: null,
+      initialBlocks: 0,
     },
     meta: {
       createdAt: Date.now(),
       lastSavedAt: null,
     },
+  };
+}
+
+function normalizeGameGrid(rawGrid) {
+  if (!rawGrid || typeof rawGrid !== "object") return null;
+
+  const cols = Math.max(1, rawGrid.cols | 0);
+  const rows = Math.max(1, rawGrid.rows | 0);
+  const maxAxis = CLEARS_SHOP_CONFIG.gridSize.maxCellsPerAxis ?? 100;
+  if (cols > maxAxis || rows > maxAxis) return null;
+
+  const size = cols * rows;
+  const hpRaw = Array.isArray(rawGrid.hp) ? rawGrid.hp : null;
+  const maxHpRaw = Array.isArray(rawGrid.maxHp) ? rawGrid.maxHp : null;
+  if (!hpRaw || !maxHpRaw || hpRaw.length !== size || maxHpRaw.length !== size) return null;
+
+  const hp = new Array(size);
+  const maxHp = new Array(size);
+  for (let i = 0; i < size; i++) {
+    const h = Number(hpRaw[i]);
+    const mh = Number(maxHpRaw[i]);
+    const safeHp = Number.isFinite(h) ? Math.max(0, h) : 0;
+    const safeMaxHp = Number.isFinite(mh) ? Math.max(safeHp, mh) : safeHp;
+    hp[i] = safeHp;
+    maxHp[i] = safeMaxHp;
+  }
+
+  const cellSize = Number.isFinite(rawGrid.cellSize) ? rawGrid.cellSize : null;
+  const originX = Number.isFinite(rawGrid.originX) ? rawGrid.originX : null;
+  const originY = Number.isFinite(rawGrid.originY) ? rawGrid.originY : null;
+
+  return {
+    cols,
+    rows,
+    cellSize: cellSize && cellSize > 0 ? cellSize : null,
+    originX,
+    originY,
+    hp,
+    maxHp,
   };
 }
 
@@ -119,6 +160,8 @@ export function normalizePlayer(raw) {
 
   const game = raw.game && typeof raw.game === "object" ? raw.game : {};
   const balls = Array.isArray(game.balls) ? game.balls : [];
+  const grid = normalizeGameGrid(game.grid);
+  const initialBlocks = Math.max(0, (game.initialBlocks ?? 0) | 0);
 
   const meta = raw.meta && typeof raw.meta === "object" ? raw.meta : {};
   const createdAt = Number.isFinite(meta.createdAt) ? meta.createdAt : base.meta.createdAt;
@@ -138,7 +181,7 @@ export function normalizePlayer(raw) {
     },
     progress: { level, masterSeed },
     map: { pattern, seed },
-    game: { balls },
+    game: { balls, grid, initialBlocks },
     meta: { createdAt, lastSavedAt },
   };
 }
