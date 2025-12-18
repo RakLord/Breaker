@@ -62,6 +62,8 @@ export function createDefaultPlayer() {
       execution: false,
       clearsLogMult: false,
       damageMulti: false,
+      persistence: false,
+      advancedPersistence: false,
     },
     ballTypes: {},
     cursor: {
@@ -171,6 +173,8 @@ export function normalizePlayer(raw) {
     execution: !!rawStarUpgrades.execution,
     clearsLogMult: !!rawStarUpgrades.clearsLogMult,
     damageMulti: !!rawStarUpgrades.damageMulti,
+    persistence: !!rawStarUpgrades.persistence,
+    advancedPersistence: !!rawStarUpgrades.advancedPersistence,
   };
 
   const rawBallTypes = raw.ballTypes && typeof raw.ballTypes === "object" ? raw.ballTypes : {};

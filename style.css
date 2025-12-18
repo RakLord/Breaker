@@ -304,6 +304,15 @@ button.glow-white:not(:disabled):hover {
   gap: 10px;
 }
 
+.clears-modal .upgrade-row,
+#clears-modal .upgrade-row,
+#clears-shop-modal .upgrade-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 0 2px;
+}
+
 .upgrade-level {
   width: 44px;
   min-width: 44px;
@@ -313,6 +322,58 @@ button.glow-white:not(:disabled):hover {
   font-variant-numeric: tabular-nums;
 }
 
+.clears-modal .upgrade-level,
+#clears-modal .upgrade-level,
+#clears-shop-modal .upgrade-level {
+  background: rgba(15, 28, 58, 0.75);
+  border: 1px solid rgba(109, 169, 255, 0.35);
+  border-radius: 10px;
+  padding: 8px 12px;
+  color: #dbe7ff;
+  min-width: 64px;
+  text-align: center;
+  box-shadow: inset 0 0 12px rgba(86, 147, 255, 0.25);
+}
+
+.clears-modal .upgrade-row button,
+#clears-modal .upgrade-row button,
+#clears-shop-modal .upgrade-row button {
+  height: 38px;
+  flex: 1;
+  justify-content: center;
+  background: linear-gradient(90deg, rgba(74, 137, 255, 0.22), rgba(112, 181, 255, 0.35));
+  border: 1px solid rgba(132, 188, 255, 0.65);
+  box-shadow:
+    0 0 18px rgba(103, 167, 255, 0.55),
+    inset 0 0 18px rgba(103, 167, 255, 0.35);
+  color: #eaf2ff;
+}
+
+.clears-modal .upgrade-row button:hover:not(:disabled),
+#clears-modal .upgrade-row button:hover:not(:disabled),
+#clears-shop-modal .upgrade-row button:hover:not(:disabled) {
+  background: linear-gradient(90deg, rgba(98, 163, 255, 0.35), rgba(148, 207, 255, 0.45));
+}
+
+.clears-modal .upgrade-row button:disabled,
+#clears-modal .upgrade-row button:disabled,
+#clears-shop-modal .upgrade-row button:disabled {
+  opacity: 0.5;
+  box-shadow: none;
+}
+
+.clears-modal .btn-cost,
+#clears-modal .btn-cost,
+#clears-shop-modal .btn-cost {
+  color: #c7deff;
+}
+
+.clears-modal .btn-label,
+#clears-modal .btn-label,
+#clears-shop-modal .btn-label {
+  font-weight: 700;
+  letter-spacing: 0.2px;
+}
 .btn-cost {
   color: rgba(96, 165, 250, 0.95);
   font-variant-numeric: tabular-nums;
@@ -381,6 +442,18 @@ button.glow-white:not(:disabled):hover {
   overflow: hidden;
 }
 
+.clears-modal .modal-panel,
+#clears-modal .modal-panel,
+#clears-shop-modal .modal-panel {
+  width: min(720px, 94vw);
+  border: 1px solid rgba(120, 180, 255, 0.4);
+  box-shadow:
+    0 0 30px rgba(83, 142, 255, 0.25),
+    0 0 120px rgba(83, 142, 255, 0.18),
+    0 20px 40px rgba(0, 0, 0, 0.65);
+  background: radial-gradient(120% 140% at 50% 20%, rgba(49, 120, 255, 0.18), rgba(5, 8, 18, 0.9));
+}
+
 .modal-header {
   display: flex;
   align-items: center;
@@ -389,12 +462,135 @@ button.glow-white:not(:disabled):hover {
   border-bottom: 1px solid rgba(255, 255, 255, 0.12);
 }
 
+.clears-modal .modal-header,
+#clears-modal .modal-header,
+#clears-shop-modal .modal-header {
+  border: none;
+  justify-content: center;
+  padding: 18px 16px 10px;
+}
+
 .modal-title {
   font-size: 13px;
   color: rgba(241, 245, 249, 0.9);
   letter-spacing: 0.2px;
 }
 
+.clears-modal .modal-title,
+#clears-modal .modal-title,
+#clears-shop-modal .modal-title {
+  font-size: 20px;
+  color: #e4edff;
+  text-shadow:
+    0 0 16px rgba(108, 163, 255, 0.8),
+    0 0 30px rgba(108, 163, 255, 0.45);
+}
+
+.clears-layout {
+  display: grid;
+  gap: 16px;
+}
+
+.clears-balance-card {
+  justify-content: center;
+  gap: 12px;
+  background: linear-gradient(90deg, rgba(34, 97, 255, 0.3), rgba(14, 66, 190, 0.28));
+  border: 1px solid rgba(120, 178, 255, 0.45);
+  box-shadow:
+    0 0 20px rgba(74, 137, 255, 0.35),
+    inset 0 0 12px rgba(74, 137, 255, 0.35);
+  color: #e9f2ff;
+  font-weight: 700;
+  letter-spacing: 0.3px;
+}
+
+.clears-section {
+  border: 1px solid rgba(125, 179, 255, 0.35);
+  border-radius: 16px;
+  padding: 14px;
+  background: linear-gradient(180deg, rgba(32, 58, 110, 0.32), rgba(8, 18, 40, 0.85));
+  box-shadow: inset 0 0 18px rgba(90, 150, 255, 0.18);
+  display: grid;
+  gap: 12px;
+}
+
+.clears-section-title {
+  color: #dfe9ff;
+  font-weight: 700;
+  letter-spacing: 0.3px;
+  text-shadow: 0 0 8px rgba(116, 170, 255, 0.6);
+}
+
+.clears-stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 10px;
+}
+
+.clears-pill {
+  border: 1px solid rgba(120, 178, 255, 0.45);
+  border-radius: 14px;
+  padding: 10px 12px;
+  background: linear-gradient(180deg, rgba(45, 82, 150, 0.38), rgba(13, 25, 52, 0.82));
+  box-shadow: inset 0 0 18px rgba(86, 147, 255, 0.2);
+  display: grid;
+  gap: 4px;
+}
+
+.clears-pill-label {
+  color: rgba(217, 231, 255, 0.75);
+  font-size: 12px;
+}
+
+.clears-pill-value {
+  color: #e9f2ff;
+  font-weight: 700;
+  font-size: 14px;
+}
+
+.clears-actions {
+  display: grid;
+  gap: 12px;
+}
+
+.clears-action {
+  display: grid;
+  gap: 6px;
+}
+
+.clears-action-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  justify-content: center;
+  padding: 10px 14px;
+  background: linear-gradient(90deg, rgba(74, 137, 255, 0.22), rgba(112, 181, 255, 0.35));
+  border: 1px solid rgba(132, 188, 255, 0.65);
+  box-shadow:
+    0 0 18px rgba(103, 167, 255, 0.55),
+    inset 0 0 18px rgba(103, 167, 255, 0.35);
+  border-radius: 12px;
+  color: #eaf2ff;
+}
+
+.clears-action-btn:hover:not(:disabled) {
+  background: linear-gradient(90deg, rgba(98, 163, 255, 0.35), rgba(148, 207, 255, 0.45));
+}
+
+.clears-action-btn:disabled {
+  opacity: 0.55;
+  box-shadow: none;
+}
+
+.clears-action-desc {
+  color: rgba(210, 224, 255, 0.8);
+  font-size: 12px;
+}
+
+.clears-icon {
+  font-size: 16px;
+  filter: drop-shadow(0 0 6px rgba(108, 163, 255, 0.7));
+}
 .modal-close {
   width: 34px;
   min-width: 34px;
@@ -409,6 +605,13 @@ button.glow-white:not(:disabled):hover {
   padding: 12px;
   display: grid;
   gap: 12px;
+}
+
+.clears-modal .modal-body,
+#clears-modal .modal-body,
+#clears-shop-modal .modal-body {
+  gap: 16px;
+  padding: 16px;
 }
 
 #clears-shop-balance,
@@ -428,6 +631,21 @@ button.glow-white:not(:disabled):hover {
   font-variant-numeric: tabular-nums;
 }
 
+.clears-modal #clears-balance,
+#clears-modal #clears-balance,
+#clears-shop-modal #clears-shop-balance {
+  justify-content: center;
+  gap: 12px;
+  background: linear-gradient(90deg, rgba(34, 97, 255, 0.3), rgba(14, 66, 190, 0.28));
+  border: 1px solid rgba(120, 178, 255, 0.45);
+  box-shadow:
+    0 0 20px rgba(74, 137, 255, 0.35),
+    inset 0 0 12px rgba(74, 137, 255, 0.35);
+  color: #e9f2ff;
+  font-weight: 700;
+  letter-spacing: 0.3px;
+}
+
 .modal-upgrade {
   border: 1px solid rgba(255, 255, 255, 0.10);
   border-radius: 14px;
@@ -437,13 +655,40 @@ button.glow-white:not(:disabled):hover {
   gap: 10px;
 }
 
+.clears-modal .modal-upgrade,
+#clears-modal .modal-upgrade,
+#clears-shop-modal .modal-upgrade {
+  border: 1px solid rgba(125, 179, 255, 0.5);
+  border-radius: 18px;
+  padding: 14px 14px 12px;
+  background: linear-gradient(180deg, rgba(36, 62, 115, 0.4), rgba(13, 25, 52, 0.85));
+  box-shadow:
+    0 10px 26px rgba(0, 0, 0, 0.55),
+    inset 0 0 24px rgba(106, 169, 255, 0.22);
+}
+
 .modal-upgrade-title {
   font-size: 13px;
   color: rgba(241, 245, 249, 0.9);
+}
+
+.clears-modal .modal-upgrade-title,
+#clears-modal .modal-upgrade-title,
+#clears-shop-modal .modal-upgrade-title {
+  font-size: 16px;
+  color: #e7eeff;
+  text-shadow: 0 0 10px rgba(106, 169, 255, 0.6);
 }
 
 .modal-upgrade-sub {
   font-size: 12px;
   color: var(--muted);
   line-height: 1.25;
+}
+
+.clears-modal .modal-upgrade-sub,
+#clears-modal .modal-upgrade-sub,
+#clears-shop-modal .modal-upgrade-sub {
+  color: rgba(210, 224, 255, 0.8);
+  font-size: 13px;
 }

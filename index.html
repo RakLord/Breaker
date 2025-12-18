@@ -96,36 +96,46 @@
                 <div id="clears-modal-title" class="modal-title">Clears</div>
                 <button id="clears-modal-close" type="button" class="modal-close" aria-label="Close">X</button>
               </div>
-              <div class="modal-body">
-                <div id="clears-balance"></div>
+              <div class="modal-body clears-layout">
+                <div id="clears-balance" class="clears-balance-card"></div>
 
-                <div class="modal-upgrade">
-                  <div class="modal-upgrade-title">Prestige</div>
-                  <div class="modal-upgrade-sub">Convert buffered clears into permanent clears. Resets balls and lower upgrades.</div>
-                  <div class="upgrade-row">
-                    <div class="upgrade-level"></div>
-                    <button id="clears-prestige-btn" type="button" class="glow-white">
-                      <span class="btn-label">Prestige</span>
-                      <span class="btn-cost" id="clears-prestige-gain">(+0)</span>
-                    </button>
+                <div class="clears-section">
+                  <div class="clears-section-title">Stats</div>
+                  <div class="clears-stats-grid">
+                    <div class="clears-pill">
+                      <div class="clears-pill-label">Prestiges</div>
+                      <div class="clears-pill-value" id="clears-stats-line1"></div>
+                    </div>
+                    <div class="clears-pill">
+                      <div class="clears-pill-label">Last Gain</div>
+                      <div class="clears-pill-value" id="clears-stats-line2"></div>
+                    </div>
+                    <div class="clears-pill">
+                      <div class="clears-pill-label">Best Gain</div>
+                      <div class="clears-pill-value" id="clears-stats-line3"></div>
+                    </div>
                   </div>
                 </div>
 
-                <div class="modal-upgrade">
-                  <div class="modal-upgrade-title">Stats</div>
-                  <div class="modal-upgrade-sub" id="clears-stats-line1"></div>
-                  <div class="modal-upgrade-sub" id="clears-stats-line2"></div>
-                </div>
-
-                <div class="modal-upgrade">
-                  <div class="modal-upgrade-title">Upgrades</div>
-                  <div class="modal-upgrade-sub">Spend Clears on permanent upgrades.</div>
-                  <div class="upgrade-row">
-                    <div class="upgrade-level"></div>
-                    <button id="clears-open-shop-btn" type="button">
-                      <span class="btn-label">Open Clears Shop</span>
-                      <span class="btn-cost">→</span>
-                    </button>
+                <div class="clears-section">
+                  <div class="clears-section-title">Actions</div>
+                  <div class="clears-actions">
+                    <div class="clears-action">
+                      <button id="clears-prestige-btn" type="button" class="clears-action-btn glow-white">
+                        <span class="clears-icon" aria-hidden="true">⬆️</span>
+                        <span class="btn-label">Prestige</span>
+                        <span class="btn-cost" id="clears-prestige-gain">(+0)</span>
+                      </button>
+                      <div class="clears-action-desc">Convert buffered clears into permanent clears. Resets balls and lower upgrades.</div>
+                    </div>
+                    <div class="clears-action">
+                      <button id="clears-open-shop-btn" type="button" class="clears-action-btn">
+                        <span class="clears-icon" aria-hidden="true">🛠️</span>
+                        <span class="btn-label">Open Clears Shop</span>
+                        <span class="btn-cost">→</span>
+                      </button>
+                      <div class="clears-action-desc">Spend Clears on permanent upgrades.</div>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -169,26 +179,45 @@
                 </div>
 
                 <div class="modal-upgrade hidden" id="star-tier2-box">
-                  <div class="modal-upgrade-title">Tier 2 (5 Stars each)</div>
+                  <div class="modal-upgrade-title">Tier 2 (3 Stars each)</div>
                   <div class="modal-upgrade-sub">Deeper upgrades unlocked after Tier 1.</div>
                   <div class="upgrade-row">
                     <div class="upgrade-level"><span id="star-piececap-state">0/2</span></div>
                     <button id="star-piececap-buy" type="button">
                       <span class="btn-label">+1 Piece Cap</span>
-                      <span class="btn-cost">(5)</span>
+                      <span class="btn-cost">(3)</span>
                     </button>
                   </div>
                   <div class="upgrade-row">
                     <div class="upgrade-level"><span id="star-clearslog-state">-</span></div>
                     <button id="star-clearslog-buy" type="button">
                       <span class="btn-label">More Clears</span>
-                      <span class="btn-cost">(5)</span>
+                      <span class="btn-cost">(3)</span>
                     </button>
                   </div>
                   <div class="upgrade-row">
                     <div class="upgrade-level"><span id="star-dmgmult-state">-</span></div>
                     <button id="star-dmgmult-buy" type="button">
                       <span class="btn-label">Damage Multi</span>
+                      <span class="btn-cost">(3)</span>
+                    </button>
+                  </div>
+                  <div class="upgrade-row">
+                    <div class="upgrade-level"><span id="star-persist-state">-</span></div>
+                    <button id="star-persist-buy" type="button">
+                      <span class="btn-label">Persistance</span>
+                      <span class="btn-cost">(3)</span>
+                    </button>
+                  </div>
+                </div>
+
+                <div class="modal-upgrade hidden" id="star-tier3-box">
+                  <div class="modal-upgrade-title">Tier 3</div>
+                  <div class="modal-upgrade-sub">Meta upgrades unlocked after Tier 2.</div>
+                  <div class="upgrade-row">
+                    <div class="upgrade-level"><span id="star-advpersist-state">-</span></div>
+                    <button id="star-advpersist-buy" type="button">
+                      <span class="btn-label">Advanced Persistance</span>
                       <span class="btn-cost">(5)</span>
                     </button>
                   </div>

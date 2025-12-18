@@ -153,7 +153,10 @@ function main() {
   const starExecStateEl = document.querySelector("#star-exec-state");
   const starClearsLogStateEl = document.querySelector("#star-clearslog-state");
   const starDmgMultStateEl = document.querySelector("#star-dmgmult-state");
+  const starPersistStateEl = document.querySelector("#star-persist-state");
+  const starAdvPersistStateEl = document.querySelector("#star-advpersist-state");
   const starTier2Box = document.querySelector("#star-tier2-box");
+  const starTier3Box = document.querySelector("#star-tier3-box");
 
   const starPieceBuyBtn = document.querySelector("#star-piece-buy");
   const starPieceCapBuyBtn = document.querySelector("#star-piececap-buy");
@@ -161,6 +164,8 @@ function main() {
   const starExecBuyBtn = document.querySelector("#star-exec-buy");
   const starClearsLogBuyBtn = document.querySelector("#star-clearslog-buy");
   const starDmgMultBuyBtn = document.querySelector("#star-dmgmult-buy");
+  const starPersistBuyBtn = document.querySelector("#star-persist-buy");
+  const starAdvPersistBuyBtn = document.querySelector("#star-advpersist-buy");
 
   const starsModal = document.querySelector("#stars-modal");
   const starsModalCloseBtn = document.querySelector("#stars-modal-close");
@@ -490,6 +495,22 @@ function main() {
     );
     if (!ok) return false;
 
+    ensureStarsState();
+    const keepNormal = getStarUpgradeOwned("persistence");
+    const keepOthers = getStarUpgradeOwned("advancedPersistence");
+    const preservedBallTypes = {};
+    if (keepNormal) {
+      const s = ensureBallTypeState(player, "normal");
+      preservedBallTypes.normal = { damageLevel: s.damageLevel, speedLevel: s.speedLevel };
+    }
+    if (keepOthers) {
+      for (const typeId of Object.keys(BALL_TYPES)) {
+        if (typeId === "normal") continue;
+        const s = ensureBallTypeState(player, typeId);
+        preservedBallTypes[typeId] = { damageLevel: s.damageLevel, speedLevel: s.speedLevel };
+      }
+    }
+
     const buffered = Math.max(0, (player.clearsBuffered ?? 0) | 0);
     ensureClearsStats();
     player.points = "0";
@@ -509,7 +530,7 @@ function main() {
     player.clearsBufferedBricks = 0;
     ensureClearsUpgrades(player);
 
-    player.ballTypes = {};
+    player.ballTypes = preservedBallTypes;
     ensureCursorState(player).level = 0;
     game.balls = [];
 
@@ -536,9 +557,19 @@ function main() {
         execution: false,
         clearsLogMult: false,
         damageMulti: false,
+        persistence: false,
+        advancedPersistence: false,
       };
     }
-    for (const k of ["pieceCount", "criticalHits", "execution", "clearsLogMult", "damageMulti"]) {
+    for (const k of [
+      "pieceCount",
+      "criticalHits",
+      "execution",
+      "clearsLogMult",
+      "damageMulti",
+      "persistence",
+      "advancedPersistence",
+    ]) {
       player.starUpgrades[k] = !!player.starUpgrades[k];
     }
     player.starUpgrades.pieceCap = Math.max(0, Math.min(2, (player.starUpgrades.pieceCap ?? 0) | 0));
@@ -892,20 +923,41 @@ function main() {
   });
   const anyTier1Bought = () =>
     getStarUpgradeOwned("pieceCount") || getStarUpgradeOwned("criticalHits") || getStarUpgradeOwned("execution");
+  const anyTier2Bought = () => {
+    ensureStarsState();
+    const pieceCap = Math.max(0, (player.starUpgrades?.pieceCap ?? 0) | 0);
+    return (
+      pieceCap > 0 ||
+      getStarUpgradeOwned("clearsLogMult") ||
+      getStarUpgradeOwned("damageMulti") ||
+      getStarUpgradeOwned("persistence")
+    );
+  };
   starPieceCapBuyBtn?.addEventListener("click", () => {
     if (!anyTier1Bought()) return setMessage("Buy a Tier 1 upgrade first");
     if (!getStarUpgradeOwned("pieceCount")) return setMessage("Unlock Piece Count first");
-    if (buyStarUpgradeLevel("pieceCap", 5, 2)) setMessage("Piece cap increased");
-    else setMessage("Need 5 Stars (or maxed)");
+    if (buyStarUpgradeLevel("pieceCap", 3, 2)) setMessage("Piece cap increased");
+    else setMessage("Need 3 Stars (or maxed)");
   });
   starClearsLogBuyBtn?.addEventListener("click", () => {
     if (!anyTier1Bought()) return setMessage("Buy a Tier 1 upgrade first");
-    if (buyStarUpgrade("clearsLogMult", 5)) setMessage("More Clears unlocked");
-    else setMessage("Need 5 Stars");
+    if (buyStarUpgrade("clearsLogMult", 3)) setMessage("More Clears unlocked");
+    else setMessage("Need 3 Stars");
   });
   starDmgMultBuyBtn?.addEventListener("click", () => {
     if (!anyTier1Bought()) return setMessage("Buy a Tier 1 upgrade first");
-    if (buyStarUpgrade("damageMulti", 5)) setMessage("Damage Multi unlocked");
+    if (buyStarUpgrade("damageMulti", 3)) setMessage("Damage Multi unlocked");
+    else setMessage("Need 3 Stars");
+  });
+  starPersistBuyBtn?.addEventListener("click", () => {
+    if (!anyTier1Bought()) return setMessage("Buy a Tier 1 upgrade first");
+    if (buyStarUpgrade("persistence", 3)) setMessage("Persistance unlocked");
+    else setMessage("Need 3 Stars");
+  });
+  starAdvPersistBuyBtn?.addEventListener("click", () => {
+    const tier2Bought = anyTier2Bought();
+    if (!tier2Bought) return setMessage("Buy a Tier 2 upgrade first");
+    if (buyStarUpgrade("advancedPersistence", 5)) setMessage("Advanced Persistance unlocked");
     else setMessage("Need 5 Stars");
   });
   cursorUpgradeBtn?.addEventListener("click", () => {
@@ -1325,6 +1377,8 @@ function main() {
     setStarOwned(starExecStateEl, getStarUpgradeOwned("execution"));
     setStarOwned(starClearsLogStateEl, getStarUpgradeOwned("clearsLogMult"));
     setStarOwned(starDmgMultStateEl, getStarUpgradeOwned("damageMulti"));
+    setStarOwned(starPersistStateEl, getStarUpgradeOwned("persistence"));
+    setStarOwned(starAdvPersistStateEl, getStarUpgradeOwned("advancedPersistence"));
 
     const starsNow = Math.max(0, (player.stars ?? 0) | 0);
     if (starPieceBuyBtn) starPieceBuyBtn.disabled = getStarUpgradeOwned("pieceCount") || starsNow < 1;
@@ -1333,14 +1387,20 @@ function main() {
 
     const tier2Locked = !anyTier1Bought();
     if (starTier2Box) starTier2Box.classList.toggle("hidden", tier2Locked);
+    const tier3Locked = !anyTier2Bought();
+    if (starTier3Box) starTier3Box.classList.toggle("hidden", tier3Locked);
     if (starPieceCapBuyBtn) {
       ensureStarsState();
       const lv = Math.max(0, (player.starUpgrades?.pieceCap ?? 0) | 0);
-      starPieceCapBuyBtn.disabled = tier2Locked || lv >= 2 || starsNow < 5;
+      starPieceCapBuyBtn.disabled = tier2Locked || lv >= 2 || starsNow < 3;
     }
     if (starClearsLogBuyBtn)
-      starClearsLogBuyBtn.disabled = tier2Locked || getStarUpgradeOwned("clearsLogMult") || starsNow < 5;
-    if (starDmgMultBuyBtn) starDmgMultBuyBtn.disabled = tier2Locked || getStarUpgradeOwned("damageMulti") || starsNow < 5;
+      starClearsLogBuyBtn.disabled = tier2Locked || getStarUpgradeOwned("clearsLogMult") || starsNow < 3;
+    if (starDmgMultBuyBtn) starDmgMultBuyBtn.disabled = tier2Locked || getStarUpgradeOwned("damageMulti") || starsNow < 3;
+    if (starPersistBuyBtn) starPersistBuyBtn.disabled = tier2Locked || getStarUpgradeOwned("persistence") || starsNow < 3;
+    if (starAdvPersistBuyBtn)
+      starAdvPersistBuyBtn.disabled =
+        tier3Locked || getStarUpgradeOwned("advancedPersistence") || starsNow < 5;
 
     requestAnimationFrame(frame);
   }
