@@ -7,6 +7,7 @@ export const BALL_SHOP_CONFIG = {
   normal: { cap: 10, baseCost: D(50), costGrowth: D(1.18) },
   splash: { cap: 10, baseCost: D(500), costGrowth: D(1.22) },
   sniper: { cap: 5, baseCost: D(2500), costGrowth: D(1.25) },
+  sweeper: { cap: 5, baseCost: D(1500), costGrowth: D(1.24) },
 };
 
 export function createDefaultPlayer() {

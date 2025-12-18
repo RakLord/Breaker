@@ -110,6 +110,22 @@ export class BlockGrid {
     return { damageDealt, destroyed };
   }
 
+  applyDamageRow(row, amount, { excludeCol = null } = {}) {
+    const r = row | 0;
+    if (r < 0 || r >= this.rows) return { damageDealt: 0, destroyed: 0 };
+    let damageDealt = 0;
+    let destroyed = 0;
+
+    for (let col = 0; col < this.cols; col++) {
+      if (excludeCol !== null && col === excludeCol) continue;
+      const res = this.applyDamageCell(col, r, amount);
+      damageDealt += res.damageDealt;
+      destroyed += res.destroyed;
+    }
+
+    return { damageDealt, destroyed };
+  }
+
   damageRadiusCells(centerCol, centerRow, radiusCells, amount, { includeCenter = true } = {}) {
     return this.applyDamageRadiusCells(centerCol, centerRow, radiusCells, amount, { includeCenter }).destroyed;
   }

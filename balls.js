@@ -43,6 +43,20 @@ export const BALL_TYPES = {
       return grid.applyDamageCell(col, row, ball.damage).damageDealt;
     },
   },
+  sweeper: {
+    id: "sweeper",
+    name: "Sweeper",
+    color: "#a78bfa",
+    radius: 7,
+    baseDamage: 1,
+    bounceOnBlocks: true,
+    onBlockHit({ grid, col, row, ball }) {
+      const hitRes = grid.applyDamageCell(col, row, ball.damage);
+      if (hitRes.destroyed <= 0) return hitRes.damageDealt;
+      const rowRes = grid.applyDamageRow(row, ball.damage, { excludeCol: col });
+      return hitRes.damageDealt + rowRes.damageDealt;
+    },
+  },
 };
 
 function clamp(v, lo, hi) {

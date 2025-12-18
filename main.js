@@ -115,14 +115,66 @@ function main() {
   let player = loadPlayerFromStorage() ?? createDefaultPlayer();
   player = normalizePlayer(player);
   ensureCursorState(player);
+  window.player = player;
 
   const game = {
     balls: [],
   };
+  window.game = game;
 
   const ui = {
     ballCards: new Map(),
   };
+
+  function applyUpgradesToAllBalls() {
+    const speedMultByType = {};
+    const damageMultByType = {};
+    const splashRangeByType = {};
+
+    for (const typeId of Object.keys(BALL_TYPES)) {
+      speedMultByType[typeId] = getBallSpeedMultiplier(player, typeId);
+      damageMultByType[typeId] = getBallDamageMultiplier(player, typeId);
+      if (typeId === "splash") {
+        const baseR = (BALL_TYPES.splash?.splashRadiusCells ?? 1) | 0;
+        const bonus = ensureBallTypeState(player, "splash").rangeLevel | 0;
+        splashRangeByType[typeId] = baseR + Math.max(0, bonus);
+      }
+    }
+
+    for (const ball of game.balls) {
+      const typeId = ball.typeId;
+      const speedMult = speedMultByType[typeId] ?? 1;
+      const damageMult = damageMultByType[typeId] ?? 1;
+
+      if (!ball.data || typeof ball.data !== "object") ball.data = {};
+
+      if (!Number.isFinite(ball.data.baseSpeed)) {
+        const currentSpeed = Math.hypot(ball.vx, ball.vy) || 0;
+        ball.data.baseSpeed = speedMult > 0 ? currentSpeed / speedMult : currentSpeed;
+      }
+      if (!Number.isFinite(ball.data.baseDamage)) {
+        const currentDamage = Number.isFinite(ball.damage) ? ball.damage : (ball.type?.baseDamage ?? 1);
+        ball.data.baseDamage = damageMult > 0 ? currentDamage / damageMult : currentDamage;
+      }
+
+      const desiredDamage = ball.data.baseDamage * damageMult;
+      if (Number.isFinite(desiredDamage) && ball.damage !== desiredDamage) ball.damage = desiredDamage;
+
+      const desiredSpeed = ball.data.baseSpeed * speedMult;
+      const currentSpeed = Math.hypot(ball.vx, ball.vy) || 0;
+      if (Number.isFinite(desiredSpeed) && desiredSpeed > 0 && currentSpeed > 0) {
+        const s = desiredSpeed / currentSpeed;
+        if (Number.isFinite(s) && Math.abs(s - 1) > 1e-6) {
+          ball.vx *= s;
+          ball.vy *= s;
+        }
+      }
+
+      if (typeId === "splash") {
+        ball.splashRadiusCells = splashRangeByType.splash ?? ball.splashRadiusCells;
+      }
+    }
+  }
 
   function setMessage(msg, seconds = 1.6) {
     state.uiMessage = msg;
@@ -191,6 +243,7 @@ function main() {
       speed,
       angleRad: angle,
       damage: type.baseDamage * damageMult,
+      data: { baseSpeed: speed / (speedMult || 1), baseDamage: type.baseDamage },
     });
     if (type.id === "splash") {
       const baseR = type.splashRadiusCells ?? 1;
@@ -204,6 +257,7 @@ function main() {
   function savePlayerNow({ silent = false } = {}) {
     player.game.balls = game.balls.map((b) => b.toJSONData());
     player = savePlayerToStorage(player);
+    window.player = player;
     if (!silent) setMessage("Saved");
   }
 
@@ -216,6 +270,7 @@ function main() {
 
     player = normalizePlayer(loaded);
     ensureCursorState(player);
+    window.player = player;
 
     game.balls = (player.game.balls ?? []).map(Ball.fromJSONData).filter(Boolean);
 
@@ -223,6 +278,7 @@ function main() {
     if (game.balls.length === 0) {
       spawnBallAt(world.width * 0.5, world.height * 0.85, "normal", { free: true });
     }
+    applyUpgradesToAllBalls();
 
     setMessage("Loaded");
     return true;
@@ -237,9 +293,11 @@ function main() {
     clearPlayerSaveFromStorage();
     player = normalizePlayer(createDefaultPlayer());
     ensureCursorState(player);
+    window.player = player;
     game.balls = [];
     regenerate({ reseed: true });
     spawnBallAt(world.width * 0.5, world.height * 0.85, "normal", { free: true });
+    applyUpgradesToAllBalls();
     setMessage("Reset complete");
   }
 
@@ -381,6 +439,7 @@ function main() {
   if (game.balls.length === 0) {
     spawnBallAt(world.width * 0.5, world.height * 0.85, "normal", { free: true });
   }
+  applyUpgradesToAllBalls();
 
   setInterval(() => {
     savePlayerNow({ silent: true });
@@ -394,6 +453,8 @@ function main() {
     lastT = t;
 
     fpsSmoothed = fpsSmoothed * 0.93 + (1 / Math.max(1e-6, dt)) * 0.07;
+
+    applyUpgradesToAllBalls();
 
     let damageDealt = 0;
     for (const ball of game.balls) damageDealt += ball.step(dt, world, grid);
