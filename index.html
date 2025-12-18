@@ -30,8 +30,8 @@
               <button id="save-btn" type="button">Save</button>
               <button id="load-btn" type="button">Load</button>
               <button id="hard-reset-btn" type="button">Hard Reset</button>
-              <button id="clears-shop-btn" type="button">Clears Shop</button>
-              <button id="prestige-btn" type="button">Prestige</button>
+              <button id="clears-shop-btn" type="button">Clears</button>
+              <button id="star-board-btn" type="button">Stars</button>
               <div id="stats"></div>
             </div>
           </div>
@@ -71,6 +71,170 @@
                     </button>
                   </div>
                   <div class="modal-upgrade-sub" id="clears-grid-info"></div>
+                </div>
+
+                <div class="modal-upgrade">
+                  <div class="modal-upgrade-title">Weaker Bricks</div>
+                  <div class="modal-upgrade-sub">Reduces starting brick HP by 1 per level (min 1).</div>
+                  <div class="upgrade-row">
+                    <div class="upgrade-level">Lv <span id="clears-hp-lvl">1</span></div>
+                    <button id="clears-hp-buy" type="button">
+                      <span class="btn-label">Buy</span>
+                      <span class="btn-cost" id="clears-hp-cost">(0)</span>
+                    </button>
+                  </div>
+                  <div class="modal-upgrade-sub" id="clears-hp-info"></div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div id="clears-modal" class="modal hidden" aria-hidden="true">
+            <div class="modal-backdrop" data-action="close"></div>
+            <div class="modal-panel" role="dialog" aria-modal="true" aria-labelledby="clears-modal-title">
+              <div class="modal-header">
+                <div id="clears-modal-title" class="modal-title">Clears</div>
+                <button id="clears-modal-close" type="button" class="modal-close" aria-label="Close">X</button>
+              </div>
+              <div class="modal-body">
+                <div id="clears-balance"></div>
+
+                <div class="modal-upgrade">
+                  <div class="modal-upgrade-title">Prestige</div>
+                  <div class="modal-upgrade-sub">Convert buffered clears into permanent clears. Resets balls and lower upgrades.</div>
+                  <div class="upgrade-row">
+                    <div class="upgrade-level"></div>
+                    <button id="clears-prestige-btn" type="button" class="glow-white">
+                      <span class="btn-label">Prestige</span>
+                      <span class="btn-cost" id="clears-prestige-gain">(+0)</span>
+                    </button>
+                  </div>
+                </div>
+
+                <div class="modal-upgrade">
+                  <div class="modal-upgrade-title">Stats</div>
+                  <div class="modal-upgrade-sub" id="clears-stats-line1"></div>
+                  <div class="modal-upgrade-sub" id="clears-stats-line2"></div>
+                </div>
+
+                <div class="modal-upgrade">
+                  <div class="modal-upgrade-title">Upgrades</div>
+                  <div class="modal-upgrade-sub">Spend Clears on permanent upgrades.</div>
+                  <div class="upgrade-row">
+                    <div class="upgrade-level"></div>
+                    <button id="clears-open-shop-btn" type="button">
+                      <span class="btn-label">Open Clears Shop</span>
+                      <span class="btn-cost">→</span>
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div id="star-board-modal" class="modal hidden" aria-hidden="true">
+            <div class="modal-backdrop" data-action="close"></div>
+            <div class="modal-panel" role="dialog" aria-modal="true" aria-labelledby="star-board-title">
+              <div class="modal-header">
+                <div id="star-board-title" class="modal-title">Star Board</div>
+                <button id="star-board-close" type="button" class="modal-close" aria-label="Close">X</button>
+              </div>
+              <div class="modal-body">
+                <div id="star-board-balance"></div>
+
+                <div class="modal-upgrade">
+                  <div class="modal-upgrade-title">Tier 1 (1 Star each)</div>
+                  <div class="modal-upgrade-sub">Unlock new ball upgrade rows permanently.</div>
+                  <div class="upgrade-row">
+                    <div class="upgrade-level"><span id="star-piece-state">-</span></div>
+                    <button id="star-piece-buy" type="button">
+                      <span class="btn-label">Unlock Piece Count</span>
+                      <span class="btn-cost">(1)</span>
+                    </button>
+                  </div>
+                  <div class="upgrade-row">
+                    <div class="upgrade-level"><span id="star-crit-state">-</span></div>
+                    <button id="star-crit-buy" type="button">
+                      <span class="btn-label">Unlock Critical Hits</span>
+                      <span class="btn-cost">(1)</span>
+                    </button>
+                  </div>
+                  <div class="upgrade-row">
+                    <div class="upgrade-level"><span id="star-exec-state">-</span></div>
+                    <button id="star-exec-buy" type="button">
+                      <span class="btn-label">Unlock Execution</span>
+                      <span class="btn-cost">(1)</span>
+                    </button>
+                  </div>
+                </div>
+
+                <div class="modal-upgrade">
+                  <div class="modal-upgrade-title">Tier 2 (5 Stars each)</div>
+                  <div class="modal-upgrade-sub">Placeholder upgrades for future mechanics.</div>
+                  <div class="upgrade-row">
+                    <div class="upgrade-level"><span id="star-p1-state">-</span></div>
+                    <button id="star-p1-buy" type="button">
+                      <span class="btn-label">Placeholder I</span>
+                      <span class="btn-cost">(5)</span>
+                    </button>
+                  </div>
+                  <div class="upgrade-row">
+                    <div class="upgrade-level"><span id="star-p2-state">-</span></div>
+                    <button id="star-p2-buy" type="button">
+                      <span class="btn-label">Placeholder II</span>
+                      <span class="btn-cost">(5)</span>
+                    </button>
+                  </div>
+                  <div class="upgrade-row">
+                    <div class="upgrade-level"><span id="star-p3-state">-</span></div>
+                    <button id="star-p3-buy" type="button">
+                      <span class="btn-label">Placeholder III</span>
+                      <span class="btn-cost">(5)</span>
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div id="stars-modal" class="modal hidden" aria-hidden="true">
+            <div class="modal-backdrop" data-action="close"></div>
+            <div class="modal-panel" role="dialog" aria-modal="true" aria-labelledby="stars-modal-title">
+              <div class="modal-header">
+                <div id="stars-modal-title" class="modal-title">Stars</div>
+                <button id="stars-modal-close" type="button" class="modal-close" aria-label="Close">X</button>
+              </div>
+              <div class="modal-body">
+                <div id="stars-balance"></div>
+
+                <div class="modal-upgrade">
+                  <div class="modal-upgrade-title">Star Prestige</div>
+                  <div class="modal-upgrade-sub">At Level 20 you can reset points/clears/balls and all lower upgrades to gain +1 Star.</div>
+                  <div class="upgrade-row">
+                    <div class="upgrade-level"></div>
+                    <button id="stars-prestige-btn" type="button" class="glow-white">
+                      <span class="btn-label">Gain +1 Star (Reset)</span>
+                      <span class="btn-cost" id="stars-prestige-req">(Lv 20)</span>
+                    </button>
+                  </div>
+                </div>
+
+                <div class="modal-upgrade">
+                  <div class="modal-upgrade-title">Stats</div>
+                  <div class="modal-upgrade-sub" id="stars-stats-line1"></div>
+                  <div class="modal-upgrade-sub" id="stars-stats-line2"></div>
+                </div>
+
+                <div class="modal-upgrade">
+                  <div class="modal-upgrade-title">Star Board</div>
+                  <div class="modal-upgrade-sub">Spend Stars to permanently unlock mechanics.</div>
+                  <div class="upgrade-row">
+                    <div class="upgrade-level"></div>
+                    <button id="stars-open-board-btn" type="button">
+                      <span class="btn-label">Open Star Board</span>
+                      <span class="btn-cost">→</span>
+                    </button>
+                  </div>
                 </div>
               </div>
             </div>

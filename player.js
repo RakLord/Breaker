@@ -24,6 +24,11 @@ export const CLEARS_SHOP_CONFIG = {
     baseCost: D(1),
     costGrowth: D(1.35),
   },
+  brickHp: {
+    maxLevel: 200,
+    baseCost: D(1),
+    costGrowth: D(1.55),
+  },
 };
 
 export function createDefaultPlayer() {
@@ -31,10 +36,31 @@ export function createDefaultPlayer() {
     version: SAVE_VERSION,
     points: "0",
     clears: "0",
+    stars: 0,
+    clearsStats: {
+      prestiges: 0,
+      lastGain: 0,
+      bestGain: 0,
+    },
+    starStats: {
+      prestiges: 0,
+      earnedTotal: 0,
+      spentTotal: 0,
+      lastPrestigeLevel: null,
+    },
     clearsBuffered: 0,
     clearsUpgrades: {
       densityLevel: 0,
       gridSizeLevel: 0,
+      brickHpLevel: 0,
+    },
+    starUpgrades: {
+      pieceCount: false,
+      criticalHits: false,
+      execution: false,
+      placeholder1: false,
+      placeholder2: false,
+      placeholder3: false,
     },
     ballTypes: {},
     cursor: {
@@ -110,11 +136,40 @@ export function normalizePlayer(raw) {
   const version = Number.isFinite(raw.version) ? raw.version : SAVE_VERSION;
   const points = typeof raw.points === "string" || typeof raw.points === "number" ? String(raw.points) : "0";
   const clears = typeof raw.clears === "string" || typeof raw.clears === "number" ? String(raw.clears) : "0";
+  const stars =
+    typeof raw.stars === "string" || typeof raw.stars === "number" ? Math.max(0, Number.parseInt(raw.stars, 10) || 0) : 0;
   const clearsBuffered = Math.max(0, (raw.clearsBuffered ?? 0) | 0);
+
+  const rawClearsStats = raw.clearsStats && typeof raw.clearsStats === "object" ? raw.clearsStats : {};
+  const clearsStats = {
+    prestiges: Math.max(0, (rawClearsStats.prestiges ?? 0) | 0),
+    lastGain: Math.max(0, (rawClearsStats.lastGain ?? 0) | 0),
+    bestGain: Math.max(0, (rawClearsStats.bestGain ?? 0) | 0),
+  };
+
+  const rawStarStats = raw.starStats && typeof raw.starStats === "object" ? raw.starStats : {};
+  const starStats = {
+    prestiges: Math.max(0, (rawStarStats.prestiges ?? 0) | 0),
+    earnedTotal: Math.max(0, (rawStarStats.earnedTotal ?? 0) | 0),
+    spentTotal: Math.max(0, (rawStarStats.spentTotal ?? 0) | 0),
+    lastPrestigeLevel: Number.isFinite(rawStarStats.lastPrestigeLevel) ? rawStarStats.lastPrestigeLevel : null,
+  };
+  starStats.earnedTotal = Math.max(starStats.earnedTotal, stars + starStats.spentTotal);
 
   const rawClearsUpgrades = raw.clearsUpgrades && typeof raw.clearsUpgrades === "object" ? raw.clearsUpgrades : {};
   const densityLevel = Math.max(0, (rawClearsUpgrades.densityLevel ?? 0) | 0);
   const gridSizeLevel = Math.max(0, (rawClearsUpgrades.gridSizeLevel ?? 0) | 0);
+  const brickHpLevel = Math.max(0, (rawClearsUpgrades.brickHpLevel ?? 0) | 0);
+
+  const rawStarUpgrades = raw.starUpgrades && typeof raw.starUpgrades === "object" ? raw.starUpgrades : {};
+  const starUpgrades = {
+    pieceCount: !!rawStarUpgrades.pieceCount,
+    criticalHits: !!rawStarUpgrades.criticalHits,
+    execution: !!rawStarUpgrades.execution,
+    placeholder1: !!rawStarUpgrades.placeholder1,
+    placeholder2: !!rawStarUpgrades.placeholder2,
+    placeholder3: !!rawStarUpgrades.placeholder3,
+  };
 
   const rawBallTypes = raw.ballTypes && typeof raw.ballTypes === "object" ? raw.ballTypes : {};
   const legacyUpgrades = raw.upgrades && typeof raw.upgrades === "object" ? raw.upgrades : null;
@@ -129,11 +184,21 @@ export function normalizePlayer(raw) {
       damageLevel: Math.max(0, (obj.damageLevel ?? 0) | 0),
       speedLevel: Math.max(0, (obj.speedLevel ?? 0) | 0),
       rangeLevel: Math.max(0, (obj.rangeLevel ?? 0) | 0),
+      pieceLevel: Math.max(0, (obj.pieceLevel ?? 0) | 0),
+      critLevel: Math.max(0, (obj.critLevel ?? 0) | 0),
+      executionLevel: Math.max(0, (obj.executionLevel ?? 0) | 0),
     };
   }
 
   if (legacyUpgrades && Object.keys(ballTypes).length === 0) {
-    ballTypes.normal = { damageLevel: legacyDamageLevel, speedLevel: legacySpeedLevel };
+    ballTypes.normal = {
+      damageLevel: legacyDamageLevel,
+      speedLevel: legacySpeedLevel,
+      rangeLevel: 0,
+      pieceLevel: 0,
+      critLevel: 0,
+      executionLevel: 0,
+    };
   }
 
   const rawCursor = raw.cursor && typeof raw.cursor === "object" ? raw.cursor : {};
@@ -171,8 +236,12 @@ export function normalizePlayer(raw) {
     version,
     points,
     clears,
+    stars,
+    clearsStats,
+    starStats,
     clearsBuffered,
-    clearsUpgrades: { densityLevel, gridSizeLevel },
+    clearsUpgrades: { densityLevel, gridSizeLevel, brickHpLevel },
+    starUpgrades,
     ballTypes,
     cursor: { level: cursorLevel },
     generation: {
@@ -232,14 +301,16 @@ export function trySpendClears(player, costDecimal) {
 
 export function ensureClearsUpgrades(player) {
   if (!player.clearsUpgrades || typeof player.clearsUpgrades !== "object") {
-    player.clearsUpgrades = { densityLevel: 0, gridSizeLevel: 0 };
+    player.clearsUpgrades = { densityLevel: 0, gridSizeLevel: 0, brickHpLevel: 0 };
   }
   player.clearsUpgrades.densityLevel = Math.max(0, (player.clearsUpgrades.densityLevel ?? 0) | 0);
   player.clearsUpgrades.gridSizeLevel = Math.max(0, (player.clearsUpgrades.gridSizeLevel ?? 0) | 0);
+  player.clearsUpgrades.brickHpLevel = Math.max(0, (player.clearsUpgrades.brickHpLevel ?? 0) | 0);
   player.clearsUpgrades.gridSizeLevel = Math.min(
     CLEARS_SHOP_CONFIG.gridSize.maxLevel,
     player.clearsUpgrades.gridSizeLevel
   );
+  player.clearsUpgrades.brickHpLevel = Math.min(CLEARS_SHOP_CONFIG.brickHp.maxLevel, player.clearsUpgrades.brickHpLevel);
   return player.clearsUpgrades;
 }
 
@@ -263,15 +334,35 @@ export function getGridSizeUpgradeCost(player) {
   return cfg.baseCost.mul(cfg.costGrowth.pow(level));
 }
 
+export function getBrickHpUpgradeLevel(player) {
+  return ensureClearsUpgrades(player).brickHpLevel;
+}
+
+export function getBrickHpUpgradeCost(player) {
+  const level = getBrickHpUpgradeLevel(player);
+  const cfg = CLEARS_SHOP_CONFIG.brickHp;
+  return cfg.baseCost.mul(cfg.costGrowth.pow(level));
+}
+
 export function ensureBallTypeState(player, typeId) {
   if (!player.ballTypes || typeof player.ballTypes !== "object") player.ballTypes = {};
   if (!player.ballTypes[typeId]) {
-    player.ballTypes[typeId] = { damageLevel: 0, speedLevel: 0, rangeLevel: 0 };
+    player.ballTypes[typeId] = {
+      damageLevel: 0,
+      speedLevel: 0,
+      rangeLevel: 0,
+      pieceLevel: 0,
+      critLevel: 0,
+      executionLevel: 0,
+    };
   }
   const s = player.ballTypes[typeId];
   s.damageLevel = Math.max(0, (s.damageLevel ?? 0) | 0);
   s.speedLevel = Math.max(0, (s.speedLevel ?? 0) | 0);
   s.rangeLevel = Math.max(0, (s.rangeLevel ?? 0) | 0);
+  s.pieceLevel = Math.max(0, (s.pieceLevel ?? 0) | 0);
+  s.critLevel = Math.max(0, (s.critLevel ?? 0) | 0);
+  s.executionLevel = Math.max(0, (s.executionLevel ?? 0) | 0);
   return s;
 }
 
@@ -325,6 +416,24 @@ export function getSplashRangeUpgradeCost(player) {
 
 export function getSplashRangeCap() {
   return 4;
+}
+
+export function getBallPieceCountUpgradeCost(player, typeId) {
+  const level = ensureBallTypeState(player, typeId).pieceLevel;
+  const baseCost = BALL_SHOP_CONFIG[typeId]?.baseCost ?? D(100);
+  return baseCost.mul(D(6)).mul(D(2).pow(level));
+}
+
+export function getBallCritUpgradeCost(player, typeId) {
+  const level = ensureBallTypeState(player, typeId).critLevel;
+  const baseCost = BALL_SHOP_CONFIG[typeId]?.baseCost ?? D(100);
+  return baseCost.mul(D(7)).mul(D(1.85).pow(level));
+}
+
+export function getBallExecutionUpgradeCost(player, typeId) {
+  const level = ensureBallTypeState(player, typeId).executionLevel;
+  const baseCost = BALL_SHOP_CONFIG[typeId]?.baseCost ?? D(100);
+  return baseCost.mul(D(9)).mul(D(1.95).pow(level));
 }
 
 export function getBallDamageMultiplier(player, typeId) {

@@ -69,6 +69,37 @@ function reflectVelocity(ball, nx, ny) {
   ball.vy -= 2 * dot * ny;
 }
 
+function getBallPieceCount(ball) {
+  const v = ball?.pieceCount;
+  if (!Number.isFinite(v)) return 1;
+  return clamp(v | 0, 1, 9);
+}
+
+function computeHitDamage(ball, grid, cellIndex, baseDamage) {
+  let damage = baseDamage;
+
+  const critChanceRaw = ball?.critChance;
+  const critChance = Number.isFinite(critChanceRaw) ? clamp(critChanceRaw, 0, 1) : 0;
+  if (critChance > 0 && Math.random() < critChance) {
+    const multRaw = ball?.critMultiplier;
+    const mult = Number.isFinite(multRaw) ? Math.max(1, multRaw) : 2;
+    damage *= mult;
+  }
+
+  const execRaw = ball?.executeRatio;
+  const execRatio = Number.isFinite(execRaw) ? clamp(execRaw, 0, 1) : 0;
+  if (execRatio > 0) {
+    const hpNow = grid.hp[cellIndex];
+    if (hpNow > 0) {
+      const maxHp = grid.maxHp[cellIndex] || hpNow;
+      const ratio = maxHp > 0 ? hpNow / maxHp : 0;
+      if (ratio <= execRatio) damage = Math.max(damage, hpNow);
+    }
+  }
+
+  return damage;
+}
+
 export class Ball {
   constructor({
     id = null,
@@ -165,7 +196,37 @@ export class Ball {
 
       const hit = grid.findCircleCollision(this.x, this.y, this.radius);
       if (hit) {
+        const baseDamage = this.damage;
+        const originalDamage = this.damage;
+        const primaryDamage = computeHitDamage(this, grid, hit.index, baseDamage);
+        this.damage = primaryDamage;
         destroyed += this.type.onBlockHit({ grid, col: hit.col, row: hit.row, ball: this });
+        this.damage = originalDamage;
+
+        const pieceCount = getBallPieceCount(this);
+        const extraPieces = pieceCount - 1;
+        if (extraPieces > 0) {
+          const candidates = [];
+          for (let dy = -1; dy <= 1; dy++) {
+            for (let dx = -1; dx <= 1; dx++) {
+              if (dx === 0 && dy === 0) continue;
+              const col = hit.col + dx;
+              const row = hit.row + dy;
+              if (!grid.inBounds(col, row)) continue;
+              const idx = grid.index(col, row);
+              if (grid.hp[idx] <= 0) continue;
+              candidates.push({ col, row, index: idx });
+            }
+          }
+
+          const pieceDamageBase = baseDamage * 0.65;
+          for (let p = 0; p < extraPieces && candidates.length > 0; p++) {
+            const pick = (Math.random() * candidates.length) | 0;
+            const target = candidates.splice(pick, 1)[0];
+            const dmg = computeHitDamage(this, grid, target.index, pieceDamageBase);
+            destroyed += grid.applyDamageCell(target.col, target.row, dmg).damageDealt;
+          }
+        }
 
         if (this.type.bounceOnBlocks) {
           this.x += hit.nx * (hit.penetration + 0.01);

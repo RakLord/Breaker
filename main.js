@@ -22,9 +22,14 @@ import {
   getCursorUpgradeCost,
   getBallDamageMultiplier,
   getBallDamageUpgradeCost,
+  getBallPieceCountUpgradeCost,
+  getBallCritUpgradeCost,
+  getBallExecutionUpgradeCost,
   getClears,
   getGridSizeUpgradeCost,
   getGridSizeUpgradeLevel,
+  getBrickHpUpgradeCost,
+  getBrickHpUpgradeLevel,
   getPoints,
   getBallSpeedMultiplier,
   getBallSpeedUpgradeCost,
@@ -109,7 +114,7 @@ function main() {
   const loadBtn = document.querySelector("#load-btn");
   const hardResetBtn = document.querySelector("#hard-reset-btn");
   const clearsShopBtn = document.querySelector("#clears-shop-btn");
-  const prestigeBtn = document.querySelector("#prestige-btn");
+  const starBoardBtn = document.querySelector("#star-board-btn");
   const hudLevelEl = document.querySelector("#hud-level");
   const cursorUpgradeBtn = document.querySelector("#cursor-upgrade-btn");
   const statsEl = document.querySelector("#stats");
@@ -124,6 +129,46 @@ function main() {
   const clearsGridCostEl = document.querySelector("#clears-grid-cost");
   const clearsGridBuyBtn = document.querySelector("#clears-grid-buy");
   const clearsGridInfoEl = document.querySelector("#clears-grid-info");
+  const clearsHpLvlEl = document.querySelector("#clears-hp-lvl");
+  const clearsHpCostEl = document.querySelector("#clears-hp-cost");
+  const clearsHpBuyBtn = document.querySelector("#clears-hp-buy");
+  const clearsHpInfoEl = document.querySelector("#clears-hp-info");
+
+  const clearsModal = document.querySelector("#clears-modal");
+  const clearsModalCloseBtn = document.querySelector("#clears-modal-close");
+  const clearsBalanceEl = document.querySelector("#clears-balance");
+  const clearsPrestigeBtn = document.querySelector("#clears-prestige-btn");
+  const clearsPrestigeGainEl = document.querySelector("#clears-prestige-gain");
+  const clearsStatsLine1El = document.querySelector("#clears-stats-line1");
+  const clearsStatsLine2El = document.querySelector("#clears-stats-line2");
+  const clearsOpenShopBtn = document.querySelector("#clears-open-shop-btn");
+
+  const starBoardModal = document.querySelector("#star-board-modal");
+  const starBoardCloseBtn = document.querySelector("#star-board-close");
+  const starBoardBalanceEl = document.querySelector("#star-board-balance");
+
+  const starPieceStateEl = document.querySelector("#star-piece-state");
+  const starCritStateEl = document.querySelector("#star-crit-state");
+  const starExecStateEl = document.querySelector("#star-exec-state");
+  const starP1StateEl = document.querySelector("#star-p1-state");
+  const starP2StateEl = document.querySelector("#star-p2-state");
+  const starP3StateEl = document.querySelector("#star-p3-state");
+
+  const starPieceBuyBtn = document.querySelector("#star-piece-buy");
+  const starCritBuyBtn = document.querySelector("#star-crit-buy");
+  const starExecBuyBtn = document.querySelector("#star-exec-buy");
+  const starP1BuyBtn = document.querySelector("#star-p1-buy");
+  const starP2BuyBtn = document.querySelector("#star-p2-buy");
+  const starP3BuyBtn = document.querySelector("#star-p3-buy");
+
+  const starsModal = document.querySelector("#stars-modal");
+  const starsModalCloseBtn = document.querySelector("#stars-modal-close");
+  const starsBalanceEl = document.querySelector("#stars-balance");
+  const starsPrestigeBtn = document.querySelector("#stars-prestige-btn");
+  const starsPrestigeReqEl = document.querySelector("#stars-prestige-req");
+  const starsStatsLine1El = document.querySelector("#stars-stats-line1");
+  const starsStatsLine2El = document.querySelector("#stars-stats-line2");
+  const starsOpenBoardBtn = document.querySelector("#stars-open-board-btn");
 
   if (!canvas) throw new Error("Missing #game-canvas");
   const ctx = canvas.getContext("2d");
@@ -187,17 +232,40 @@ function main() {
     grid.originY = 0;
   }
 
+  function getPieceCountForLevel(level) {
+    return clamp(1 + Math.max(0, level | 0), 1, 9);
+  }
+
+  function getCritChanceForLevel(level) {
+    return clamp(Math.max(0, level | 0) * 0.02, 0, 0.5);
+  }
+
+  function getExecuteRatioForLevel(level) {
+    return clamp(Math.max(0, level | 0) * 0.05, 0, 0.5);
+  }
+
   function applyUpgradesToAllBalls() {
     const speedMultByType = {};
     const damageMultByType = {};
     const splashRangeByType = {};
+    const pieceCountByType = {};
+    const critChanceByType = {};
+    const executeRatioByType = {};
+
+    const pieceUnlocked = getStarUpgradeOwned("pieceCount");
+    const critUnlocked = getStarUpgradeOwned("criticalHits");
+    const execUnlocked = getStarUpgradeOwned("execution");
 
     for (const typeId of Object.keys(BALL_TYPES)) {
+      const typeState = ensureBallTypeState(player, typeId);
       speedMultByType[typeId] = getBallSpeedMultiplier(player, typeId);
       damageMultByType[typeId] = getBallDamageMultiplier(player, typeId);
+      pieceCountByType[typeId] = pieceUnlocked ? getPieceCountForLevel(typeState.pieceLevel) : 1;
+      critChanceByType[typeId] = critUnlocked ? getCritChanceForLevel(typeState.critLevel) : 0;
+      executeRatioByType[typeId] = execUnlocked ? getExecuteRatioForLevel(typeState.executionLevel) : 0;
       if (typeId === "splash") {
         const baseR = (BALL_TYPES.splash?.splashRadiusCells ?? 1) | 0;
-        const bonus = ensureBallTypeState(player, "splash").rangeLevel | 0;
+        const bonus = typeState.rangeLevel | 0;
         splashRangeByType[typeId] = baseR + Math.max(0, bonus);
       }
     }
@@ -206,6 +274,10 @@ function main() {
       const typeId = ball.typeId;
       const speedMult = speedMultByType[typeId] ?? 1;
       const damageMult = damageMultByType[typeId] ?? 1;
+      ball.pieceCount = pieceCountByType[typeId] ?? 1;
+      ball.critChance = critChanceByType[typeId] ?? 0;
+      ball.critMultiplier = 2;
+      ball.executeRatio = executeRatioByType[typeId] ?? 0;
 
       if (!ball.data || typeof ball.data !== "object") ball.data = {};
 
@@ -262,6 +334,7 @@ function main() {
     const seed = (player.progress.masterSeed + level) >>> 0;
 
     updateGridFromPlayer();
+    ensureClearsUpgrades(player);
     const baseThreshold = player.generation.noiseThreshold;
     const densityLevel = getDensityUpgradeLevel(player);
     const step = CLEARS_SHOP_CONFIG.density.thresholdStep;
@@ -277,14 +350,16 @@ function main() {
       maxFillRatio: CLEARS_SHOP_CONFIG.density.maxFillRatio,
     });
     const noiseThreshold = Math.max(desiredThreshold, capThreshold);
+    const brickHpLevel = getBrickHpUpgradeLevel(player);
+    const startHp = Math.max(1, level - brickHpLevel);
 
     grid.generate({
       pattern: "noise",
       seed,
       noiseScale,
       noiseThreshold,
-      hpMin: level,
-      hpMax: level,
+      hpMin: startHp,
+      hpMax: startHp,
       filledRowsRatio: 1,
       emptyBorder: 0,
     });
@@ -403,9 +478,13 @@ function main() {
     const ok = window.confirm(
       "Prestige will reset your balls and upgrades, and convert buffered clears into clears.\n\nContinue?"
     );
-    if (!ok) return;
+    if (!ok) return false;
 
     const buffered = Math.max(0, (player.clearsBuffered ?? 0) | 0);
+    ensureClearsStats();
+    player.clearsStats.prestiges += 1;
+    player.clearsStats.lastGain = buffered;
+    player.clearsStats.bestGain = Math.max(player.clearsStats.bestGain ?? 0, buffered);
     if (buffered > 0) addClears(player, D(buffered));
     player.clearsBuffered = 0;
     ensureClearsUpgrades(player);
@@ -423,6 +502,114 @@ function main() {
 
     window.player = player;
     setMessage("Prestiged");
+    return true;
+  }
+
+  function ensureStarsState() {
+    if (!Number.isFinite(player.stars)) player.stars = 0;
+    player.stars = Math.max(0, player.stars | 0);
+    if (!player.starUpgrades || typeof player.starUpgrades !== "object") {
+      player.starUpgrades = {
+        pieceCount: false,
+        criticalHits: false,
+        execution: false,
+        placeholder1: false,
+        placeholder2: false,
+        placeholder3: false,
+      };
+    }
+    for (const k of ["pieceCount", "criticalHits", "execution", "placeholder1", "placeholder2", "placeholder3"]) {
+      player.starUpgrades[k] = !!player.starUpgrades[k];
+    }
+
+    if (!player.starStats || typeof player.starStats !== "object") {
+      player.starStats = {
+        prestiges: 0,
+        earnedTotal: 0,
+        spentTotal: 0,
+        lastPrestigeLevel: null,
+      };
+    }
+    player.starStats.prestiges = Math.max(0, (player.starStats.prestiges ?? 0) | 0);
+    player.starStats.earnedTotal = Math.max(0, (player.starStats.earnedTotal ?? 0) | 0);
+    player.starStats.spentTotal = Math.max(0, (player.starStats.spentTotal ?? 0) | 0);
+    player.starStats.lastPrestigeLevel = Number.isFinite(player.starStats.lastPrestigeLevel)
+      ? player.starStats.lastPrestigeLevel
+      : null;
+    player.starStats.earnedTotal = Math.max(player.starStats.earnedTotal, player.stars + player.starStats.spentTotal);
+  }
+
+  function ensureClearsStats() {
+    if (!player.clearsStats || typeof player.clearsStats !== "object") {
+      player.clearsStats = { prestiges: 0, lastGain: 0, bestGain: 0 };
+    }
+    player.clearsStats.prestiges = Math.max(0, (player.clearsStats.prestiges ?? 0) | 0);
+    player.clearsStats.lastGain = Math.max(0, (player.clearsStats.lastGain ?? 0) | 0);
+    player.clearsStats.bestGain = Math.max(0, (player.clearsStats.bestGain ?? 0) | 0);
+  }
+
+  function canStarPrestige() {
+    ensureProgress();
+    return (player.progress?.level ?? 1) >= 20;
+  }
+
+  function starPrestigeNow() {
+    ensureStarsState();
+    if (!canStarPrestige()) {
+      setMessage("Need Level 20");
+      return false;
+    }
+
+    const ok = window.confirm(
+      "Star Prestige will reset points/clears/balls and all lower-layer upgrades.\n\nYou will gain +1 Star.\n\nContinue?"
+    );
+    if (!ok) return false;
+
+    const keepStars = Math.max(0, (player.stars ?? 0) | 0) + 1;
+    const keepStarUpgrades = { ...(player.starUpgrades ?? {}) };
+    const keepStarStats = { ...(player.starStats ?? {}) };
+    keepStarStats.prestiges = Math.max(0, (keepStarStats.prestiges ?? 0) | 0) + 1;
+    keepStarStats.earnedTotal = Math.max(0, (keepStarStats.earnedTotal ?? 0) | 0) + 1;
+    keepStarStats.lastPrestigeLevel = player.progress?.level ?? null;
+
+    player = normalizePlayer(createDefaultPlayer());
+    player.stars = keepStars;
+    player.starUpgrades = keepStarUpgrades;
+    player.starStats = keepStarStats;
+
+    ensureCursorState(player).level = 0;
+    ensureGenerationSettings(player);
+    ensureClearsUpgrades(player);
+    ensureProgress();
+    player.progress.level = 1;
+    player.progress.masterSeed = (Math.random() * 2 ** 32) >>> 0;
+
+    updateGridFromPlayer();
+    window.player = player;
+
+    game.balls = [];
+    regenerate();
+    spawnBallAt(world.width * 0.5, world.height * 0.85, "normal", { free: true });
+    applyUpgradesToAllBalls();
+
+    setMessage("Gained +1 Star");
+    savePlayerNow({ silent: true });
+    return true;
+  }
+
+  function getStarUpgradeOwned(key) {
+    ensureStarsState();
+    return !!player.starUpgrades?.[key];
+  }
+
+  function buyStarUpgrade(key, cost) {
+    ensureStarsState();
+    if (getStarUpgradeOwned(key)) return false;
+    if (player.stars < cost) return false;
+    player.stars -= cost;
+    player.starStats.spentTotal = Math.max(0, (player.starStats.spentTotal ?? 0) | 0) + cost;
+    player.starUpgrades[key] = true;
+    return true;
   }
 
   function openClearsShop() {
@@ -435,6 +622,42 @@ function main() {
     if (!clearsShopModal) return;
     clearsShopModal.classList.add("hidden");
     clearsShopModal.setAttribute("aria-hidden", "true");
+  }
+
+  function openClearsModal() {
+    if (!clearsModal) return;
+    clearsModal.classList.remove("hidden");
+    clearsModal.setAttribute("aria-hidden", "false");
+  }
+
+  function closeClearsModal() {
+    if (!clearsModal) return;
+    clearsModal.classList.add("hidden");
+    clearsModal.setAttribute("aria-hidden", "true");
+  }
+
+  function openStarBoard() {
+    if (!starBoardModal) return;
+    starBoardModal.classList.remove("hidden");
+    starBoardModal.setAttribute("aria-hidden", "false");
+  }
+
+  function closeStarBoard() {
+    if (!starBoardModal) return;
+    starBoardModal.classList.add("hidden");
+    starBoardModal.setAttribute("aria-hidden", "true");
+  }
+
+  function openStarsModal() {
+    if (!starsModal) return;
+    starsModal.classList.remove("hidden");
+    starsModal.setAttribute("aria-hidden", "false");
+  }
+
+  function closeStarsModal() {
+    if (!starsModal) return;
+    starsModal.classList.add("hidden");
+    starsModal.setAttribute("aria-hidden", "true");
   }
 
   function getMaxDensityLevel() {
@@ -486,11 +709,26 @@ function main() {
             <button type="button" data-action="spd-up"><span class="btn-label">+1 Speed</span> <span class="btn-cost" data-role="spd-cost">(0)</span></button>
           </div>
           ${rangeRow}
+          <div class="upgrade-row hidden" data-upgrade="piece">
+            <div class="upgrade-level">Lv <span data-role="pc-lvl">1</span></div>
+            <button type="button" data-action="pc-up"><span class="btn-label">+1 Piece</span> <span class="btn-cost" data-role="pc-cost">(0)</span></button>
+          </div>
+          <div class="upgrade-row hidden" data-upgrade="crit">
+            <div class="upgrade-level">Lv <span data-role="crit-lvl">1</span></div>
+            <button type="button" data-action="crit-up"><span class="btn-label">+1 Crit</span> <span class="btn-cost" data-role="crit-cost">(0)</span></button>
+          </div>
+          <div class="upgrade-row hidden" data-upgrade="exec">
+            <div class="upgrade-level">Lv <span data-role="exec-lvl">1</span></div>
+            <button type="button" data-action="exec-up"><span class="btn-label">+1 Execute</span> <span class="btn-cost" data-role="exec-cost">(0)</span></button>
+          </div>
         </div>
 
         <div class="ball-stats">
           <div>Damage: <span data-role="damage">0</span></div>
           <div>Speed: <span data-role="speed">x1.00</span></div>
+          <div class="hidden" data-role="pieces-row">Pieces: <span data-role="pieces">1</span></div>
+          <div class="hidden" data-role="crit-row">Crit: <span data-role="crit">0%</span></div>
+          <div class="hidden" data-role="exec-row">Execute: <span data-role="exec">0%</span></div>
         </div>
       </div>
     `;
@@ -538,6 +776,29 @@ function main() {
         state.rangeLevel += 1;
         setMessage(`Splash range upgraded`);
       }
+      if (action === "pc-up") {
+        if (!getStarUpgradeOwned("pieceCount")) return setMessage("Unlock Piece Count in Star Board");
+        const cost = getBallPieceCountUpgradeCost(player, typeId);
+        if (!trySpendPoints(player, cost)) return setMessage(`Need ${formatInt(cost)}`);
+        ensureBallTypeState(player, typeId).pieceLevel += 1;
+        setMessage(`${typeId} piece count upgraded`);
+        return;
+      }
+      if (action === "crit-up") {
+        if (!getStarUpgradeOwned("criticalHits")) return setMessage("Unlock Critical Hits in Star Board");
+        const cost = getBallCritUpgradeCost(player, typeId);
+        if (!trySpendPoints(player, cost)) return setMessage(`Need ${formatInt(cost)}`);
+        ensureBallTypeState(player, typeId).critLevel += 1;
+        setMessage(`${typeId} crit upgraded`);
+        return;
+      }
+      if (action === "exec-up") {
+        if (!getStarUpgradeOwned("execution")) return setMessage("Unlock Execution in Star Board");
+        const cost = getBallExecutionUpgradeCost(player, typeId);
+        if (!trySpendPoints(player, cost)) return setMessage(`Need ${formatInt(cost)}`);
+        ensureBallTypeState(player, typeId).executionLevel += 1;
+        setMessage(`${typeId} execution upgraded`);
+      }
     });
 
     for (const typeId of Object.keys(BALL_TYPES)) ensureBallCard(typeId);
@@ -546,8 +807,65 @@ function main() {
   saveBtn?.addEventListener("click", savePlayerNow);
   loadBtn?.addEventListener("click", loadPlayerNow);
   hardResetBtn?.addEventListener("click", hardResetNow);
-  clearsShopBtn?.addEventListener("click", openClearsShop);
-  prestigeBtn?.addEventListener("click", prestigeNow);
+  clearsShopBtn?.addEventListener("click", openClearsModal);
+  starBoardBtn?.addEventListener("click", openStarsModal);
+  clearsModalCloseBtn?.addEventListener("click", closeClearsModal);
+  clearsModal?.addEventListener("click", (e) => {
+    const target = e.target;
+    if (target?.dataset?.action === "close") closeClearsModal();
+  });
+  clearsPrestigeBtn?.addEventListener("click", () => {
+    const did = prestigeNow();
+    if (did) closeClearsModal();
+  });
+  clearsOpenShopBtn?.addEventListener("click", () => {
+    closeClearsModal();
+    openClearsShop();
+  });
+
+  starsModalCloseBtn?.addEventListener("click", closeStarsModal);
+  starsModal?.addEventListener("click", (e) => {
+    const target = e.target;
+    if (target?.dataset?.action === "close") closeStarsModal();
+  });
+  starsPrestigeBtn?.addEventListener("click", () => {
+    const did = starPrestigeNow();
+    if (did) closeStarsModal();
+  });
+  starsOpenBoardBtn?.addEventListener("click", () => {
+    closeStarsModal();
+    openStarBoard();
+  });
+
+  starPieceBuyBtn?.addEventListener("click", () => {
+    if (buyStarUpgrade("pieceCount", 1)) setMessage("Unlocked Piece Count upgrades");
+    else setMessage("Need 1 Star");
+  });
+  starCritBuyBtn?.addEventListener("click", () => {
+    if (buyStarUpgrade("criticalHits", 1)) setMessage("Unlocked Critical Hits upgrades");
+    else setMessage("Need 1 Star");
+  });
+  starExecBuyBtn?.addEventListener("click", () => {
+    if (buyStarUpgrade("execution", 1)) setMessage("Unlocked Execution upgrades");
+    else setMessage("Need 1 Star");
+  });
+  const tier1Complete = () =>
+    getStarUpgradeOwned("pieceCount") && getStarUpgradeOwned("criticalHits") && getStarUpgradeOwned("execution");
+  starP1BuyBtn?.addEventListener("click", () => {
+    if (!tier1Complete()) return setMessage("Complete Tier 1 first");
+    if (buyStarUpgrade("placeholder1", 5)) setMessage("Placeholder I unlocked");
+    else setMessage("Need 5 Stars");
+  });
+  starP2BuyBtn?.addEventListener("click", () => {
+    if (!tier1Complete()) return setMessage("Complete Tier 1 first");
+    if (buyStarUpgrade("placeholder2", 5)) setMessage("Placeholder II unlocked");
+    else setMessage("Need 5 Stars");
+  });
+  starP3BuyBtn?.addEventListener("click", () => {
+    if (!tier1Complete()) return setMessage("Complete Tier 1 first");
+    if (buyStarUpgrade("placeholder3", 5)) setMessage("Placeholder III unlocked");
+    else setMessage("Need 5 Stars");
+  });
   cursorUpgradeBtn?.addEventListener("click", () => {
     const cost = getCursorUpgradeCost(player);
     if (!trySpendPoints(player, cost)) return setMessage(`Need ${formatInt(cost)}`);
@@ -559,8 +877,17 @@ function main() {
     const target = e.target;
     if (target?.dataset?.action === "close") closeClearsShop();
   });
+  starBoardCloseBtn?.addEventListener("click", closeStarBoard);
+  starBoardModal?.addEventListener("click", (e) => {
+    const target = e.target;
+    if (target?.dataset?.action === "close") closeStarBoard();
+  });
   window.addEventListener("keydown", (e) => {
-    if (e.key === "Escape") closeClearsShop();
+    if (e.key !== "Escape") return;
+    closeClearsShop();
+    closeStarBoard();
+    closeClearsModal();
+    closeStarsModal();
   });
   clearsDensityBuyBtn?.addEventListener("click", () => {
     ensureClearsUpgrades(player);
@@ -586,6 +913,18 @@ function main() {
     updateGridFromPlayer();
     regenerate();
     setMessage("Grid size upgraded");
+  });
+  clearsHpBuyBtn?.addEventListener("click", () => {
+    ensureClearsUpgrades(player);
+    const level = getBrickHpUpgradeLevel(player);
+    const maxLevel = CLEARS_SHOP_CONFIG.brickHp.maxLevel;
+    if (level >= maxLevel) return;
+
+    const cost = getBrickHpUpgradeCost(player);
+    if (!trySpendClears(player, cost)) return setMessage(`Need ${formatInt(cost)} clears`);
+    player.clearsUpgrades.brickHpLevel += 1;
+    regenerate();
+    setMessage("Brick HP reduced");
   });
   window.addEventListener("beforeunload", () => savePlayerNow({ silent: true }));
 
@@ -677,6 +1016,9 @@ function main() {
 
     const countsByType = {};
     for (const ball of game.balls) countsByType[ball.typeId] = (countsByType[ball.typeId] ?? 0) + 1;
+    const pieceUnlocked = getStarUpgradeOwned("pieceCount");
+    const critUnlocked = getStarUpgradeOwned("criticalHits");
+    const execUnlocked = getStarUpgradeOwned("execution");
     for (const typeId of Object.keys(BALL_TYPES)) {
       const card = ensureBallCard(typeId);
       if (!card) continue;
@@ -707,6 +1049,13 @@ function main() {
         const radius = baseR + (typeState.rangeLevel ?? 0);
         if (spdEl) spdEl.textContent = `x${spdMult.toFixed(2)} | R${radius}`;
       }
+
+      const pieceRow = card.querySelector('[data-upgrade="piece"]');
+      if (pieceRow) pieceRow.classList.toggle("hidden", !pieceUnlocked);
+      const critRow = card.querySelector('[data-upgrade="crit"]');
+      if (critRow) critRow.classList.toggle("hidden", !critUnlocked);
+      const execRow = card.querySelector('[data-upgrade="exec"]');
+      if (execRow) execRow.classList.toggle("hidden", !execUnlocked);
 
       const buyBtn = card.querySelector('button[data-action="buy"]');
       if (buyBtn) {
@@ -743,6 +1092,51 @@ function main() {
         const btn = card.querySelector('button[data-action="rng-up"]');
         if (btn) btn.disabled = typeState.rangeLevel >= cap || !canAfford(player, cost);
       }
+
+      if (pieceUnlocked) {
+        const cost = getBallPieceCountUpgradeCost(player, typeId);
+        const lvlEl = card.querySelector('[data-role="pc-lvl"]');
+        if (lvlEl) lvlEl.textContent = String(typeState.pieceLevel + 1);
+        const costEl = card.querySelector('[data-role="pc-cost"]');
+        if (costEl) costEl.textContent = `(${formatInt(cost)})`;
+        const btn = card.querySelector('button[data-action="pc-up"]');
+        if (btn) btn.disabled = !canAfford(player, cost);
+      }
+
+      if (critUnlocked) {
+        const cost = getBallCritUpgradeCost(player, typeId);
+        const lvlEl = card.querySelector('[data-role="crit-lvl"]');
+        if (lvlEl) lvlEl.textContent = String(typeState.critLevel + 1);
+        const costEl = card.querySelector('[data-role="crit-cost"]');
+        if (costEl) costEl.textContent = `(${formatInt(cost)})`;
+        const btn = card.querySelector('button[data-action="crit-up"]');
+        if (btn) btn.disabled = !canAfford(player, cost);
+      }
+
+      if (execUnlocked) {
+        const cost = getBallExecutionUpgradeCost(player, typeId);
+        const lvlEl = card.querySelector('[data-role="exec-lvl"]');
+        if (lvlEl) lvlEl.textContent = String(typeState.executionLevel + 1);
+        const costEl = card.querySelector('[data-role="exec-cost"]');
+        if (costEl) costEl.textContent = `(${formatInt(cost)})`;
+        const btn = card.querySelector('button[data-action="exec-up"]');
+        if (btn) btn.disabled = !canAfford(player, cost);
+      }
+
+      const piecesRow = card.querySelector('[data-role="pieces-row"]');
+      if (piecesRow) piecesRow.classList.toggle("hidden", !pieceUnlocked);
+      const piecesEl = card.querySelector('[data-role="pieces"]');
+      if (piecesEl && pieceUnlocked) piecesEl.textContent = String(getPieceCountForLevel(typeState.pieceLevel));
+
+      const critRowEl = card.querySelector('[data-role="crit-row"]');
+      if (critRowEl) critRowEl.classList.toggle("hidden", !critUnlocked);
+      const critEl = card.querySelector('[data-role="crit"]');
+      if (critEl && critUnlocked) critEl.textContent = `${Math.round(getCritChanceForLevel(typeState.critLevel) * 100)}%`;
+
+      const execRowEl = card.querySelector('[data-role="exec-row"]');
+      if (execRowEl) execRowEl.classList.toggle("hidden", !execUnlocked);
+      const execEl = card.querySelector('[data-role="exec"]');
+      if (execEl && execUnlocked) execEl.textContent = `${Math.round(getExecuteRatioForLevel(typeState.executionLevel) * 100)}%`;
     }
 
     if (cursorUpgradeBtn) {
@@ -753,7 +1147,10 @@ function main() {
     }
 
     const clearsNow = getClears(player);
-    if (clearsShopBtn) clearsShopBtn.textContent = `Clears Shop (${formatInt(clearsNow)})`;
+    if (clearsShopBtn) {
+      const buffered = Math.max(0, (player.clearsBuffered ?? 0) | 0);
+      clearsShopBtn.textContent = buffered > 0 ? `Clears (${formatInt(clearsNow)} +${buffered})` : `Clears (${formatInt(clearsNow)})`;
+    }
     if (clearsShopBalanceEl) {
       const buffered = Math.max(0, (player.clearsBuffered ?? 0) | 0);
       clearsShopBalanceEl.textContent = `Clears: ${formatInt(clearsNow)} (buffer +${buffered})`;
@@ -783,11 +1180,26 @@ function main() {
       clearsGridBuyBtn.disabled = level >= maxLevel || !canAffordClears(player, cost);
       if (clearsGridInfoEl) clearsGridInfoEl.textContent = `Cells per axis: ${cols}/${maxCols}`;
     }
+    if (clearsHpLvlEl && clearsHpCostEl && clearsHpBuyBtn) {
+      const level = getBrickHpUpgradeLevel(player);
+      const maxLevel = CLEARS_SHOP_CONFIG.brickHp.maxLevel;
+      const cost = getBrickHpUpgradeCost(player);
+      clearsHpLvlEl.textContent = String(level + 1);
+      clearsHpCostEl.textContent = `(${formatInt(cost)})`;
+      clearsHpBuyBtn.disabled = level >= maxLevel || !canAffordClears(player, cost);
+
+      if (clearsHpInfoEl) {
+        const worldLevel = player.progress?.level ?? 1;
+        const startHp = Math.max(1, worldLevel - level);
+        clearsHpInfoEl.textContent = `Starting HP at Level ${worldLevel}: ${startHp}`;
+      }
+    }
 
     if (statsEl) {
       const msg = performance.now() < state.uiMessageUntil ? ` | ${state.uiMessage}` : "";
       const level = player.progress?.level ?? 1;
-      statsEl.textContent = `Balls: ${game.balls.length} | Blocks: ${aliveBlocks} | Level: ${level} | FPS: ${fpsSmoothed.toFixed(0)}${msg}`;
+      const stars = Math.max(0, (player.stars ?? 0) | 0);
+      statsEl.textContent = `Balls: ${game.balls.length} | Blocks: ${aliveBlocks} | Level: ${level} | Stars: ${stars} | FPS: ${fpsSmoothed.toFixed(0)}${msg}`;
     }
 
     if (hudLevelEl) {
@@ -796,6 +1208,74 @@ function main() {
       const buffered = Math.max(0, (player.clearsBuffered ?? 0) | 0);
       hudLevelEl.textContent = `Level ${level} | Bricks ${aliveBlocks}/${state.initialBlocks} | Clears ${clears} (+${buffered})`;
     }
+
+    if (starBoardBtn) {
+      const stars = Math.max(0, (player.stars ?? 0) | 0);
+      starBoardBtn.textContent = `Stars (${stars})`;
+    }
+    if (starBoardBalanceEl) {
+      const stars = Math.max(0, (player.stars ?? 0) | 0);
+      const tier1 = tier1Complete() ? "Tier 1 complete" : "Tier 1 incomplete";
+      starBoardBalanceEl.textContent = `Stars: ${stars} | ${tier1}`;
+    }
+
+    if (clearsBalanceEl || clearsPrestigeBtn || clearsPrestigeGainEl || clearsStatsLine1El || clearsStatsLine2El) {
+      ensureClearsStats();
+      const buffered = Math.max(0, (player.clearsBuffered ?? 0) | 0);
+      if (clearsBalanceEl) {
+        clearsBalanceEl.textContent = `Clears: ${formatInt(clearsNow)} | Buffered: +${buffered} | Best: +${player.clearsStats.bestGain ?? 0}`;
+      }
+      if (clearsPrestigeGainEl) clearsPrestigeGainEl.textContent = `(+${buffered})`;
+      if (clearsPrestigeBtn) clearsPrestigeBtn.disabled = buffered <= 0;
+      if (clearsStatsLine1El) {
+        clearsStatsLine1El.textContent = `Prestiges: ${player.clearsStats.prestiges ?? 0} | Last gain: +${player.clearsStats.lastGain ?? 0}`;
+      }
+      if (clearsStatsLine2El) {
+        clearsStatsLine2El.textContent = `Best gain: +${player.clearsStats.bestGain ?? 0}`;
+      }
+    }
+
+    if (starsBalanceEl || starsPrestigeBtn || starsPrestigeReqEl || starsStatsLine1El || starsStatsLine2El) {
+      ensureStarsState();
+      const stars = Math.max(0, (player.stars ?? 0) | 0);
+      const ok = canStarPrestige();
+      if (starsBalanceEl) {
+        const earned = Math.max(0, (player.starStats?.earnedTotal ?? 0) | 0);
+        const spent = Math.max(0, (player.starStats?.spentTotal ?? 0) | 0);
+        starsBalanceEl.textContent = `Stars: ${stars} | Earned: ${earned} | Spent: ${spent}`;
+      }
+      if (starsPrestigeBtn) starsPrestigeBtn.disabled = !ok;
+      if (starsPrestigeReqEl) starsPrestigeReqEl.textContent = ok ? "Ready" : "Lv 20";
+      if (starsStatsLine1El) {
+        const prestiges = Math.max(0, (player.starStats?.prestiges ?? 0) | 0);
+        starsStatsLine1El.textContent = `Star prestiges: ${prestiges}`;
+      }
+      if (starsStatsLine2El) {
+        const last = player.starStats?.lastPrestigeLevel;
+        starsStatsLine2El.textContent = `Last prestige level: ${Number.isFinite(last) ? last : "-"}`;
+      }
+    }
+
+    const setStarOwned = (el, owned) => {
+      if (!el) return;
+      el.textContent = owned ? "✓" : "-";
+    };
+    setStarOwned(starPieceStateEl, getStarUpgradeOwned("pieceCount"));
+    setStarOwned(starCritStateEl, getStarUpgradeOwned("criticalHits"));
+    setStarOwned(starExecStateEl, getStarUpgradeOwned("execution"));
+    setStarOwned(starP1StateEl, getStarUpgradeOwned("placeholder1"));
+    setStarOwned(starP2StateEl, getStarUpgradeOwned("placeholder2"));
+    setStarOwned(starP3StateEl, getStarUpgradeOwned("placeholder3"));
+
+    const starsNow = Math.max(0, (player.stars ?? 0) | 0);
+    if (starPieceBuyBtn) starPieceBuyBtn.disabled = getStarUpgradeOwned("pieceCount") || starsNow < 1;
+    if (starCritBuyBtn) starCritBuyBtn.disabled = getStarUpgradeOwned("criticalHits") || starsNow < 1;
+    if (starExecBuyBtn) starExecBuyBtn.disabled = getStarUpgradeOwned("execution") || starsNow < 1;
+
+    const tier2Locked = !tier1Complete();
+    if (starP1BuyBtn) starP1BuyBtn.disabled = tier2Locked || getStarUpgradeOwned("placeholder1") || starsNow < 5;
+    if (starP2BuyBtn) starP2BuyBtn.disabled = tier2Locked || getStarUpgradeOwned("placeholder2") || starsNow < 5;
+    if (starP3BuyBtn) starP3BuyBtn.disabled = tier2Locked || getStarUpgradeOwned("placeholder3") || starsNow < 5;
 
     requestAnimationFrame(frame);
   }

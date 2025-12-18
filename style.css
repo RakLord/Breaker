@@ -190,6 +190,23 @@ button:disabled {
   box-shadow: none;
 }
 
+button.glow-white:not(:disabled) {
+  border-color: rgba(241, 245, 249, 0.55);
+  background: rgba(241, 245, 249, 0.10);
+  box-shadow:
+    0 10px 20px rgba(0, 0, 0, 0.45),
+    0 1px 0 rgba(255, 255, 255, 0.10) inset,
+    0 0 24px rgba(241, 245, 249, 0.22);
+}
+
+button.glow-white:not(:disabled):hover {
+  background: rgba(241, 245, 249, 0.14);
+  box-shadow:
+    0 14px 26px rgba(0, 0, 0, 0.50),
+    0 1px 0 rgba(255, 255, 255, 0.14) inset,
+    0 0 34px rgba(241, 245, 249, 0.30);
+}
+
 #stats {
   height: 32px;
   display: flex;
@@ -394,7 +411,10 @@ button:disabled {
   gap: 12px;
 }
 
-#clears-shop-balance {
+#clears-shop-balance,
+#star-board-balance,
+#clears-balance,
+#stars-balance {
   height: 32px;
   display: flex;
   align-items: center;
