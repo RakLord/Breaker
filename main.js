@@ -1,16 +1,25 @@
-import { D, format } from "./numbers.js";
 import { BlockGrid } from "./grid.js";
-import { createBall } from "./balls.js";
+import { Ball, BALL_TYPES } from "./balls.js";
 import { parseSeedToUint32 } from "./rng.js";
+import { D, format } from "./numbers.js";
+import {
+  addPoints,
+  canAfford,
+  createDefaultPlayer,
+  getBallSpawnCost,
+  getDamageMultiplier,
+  getDamageUpgradeCost,
+  getPoints,
+  getSpeedMultiplier,
+  getSpeedUpgradeCost,
+  loadPlayerFromStorage,
+  normalizePlayer,
+  savePlayerToStorage,
+  trySpendPoints,
+} from "./player.js";
 
 function clamp(v, lo, hi) {
   return v < lo ? lo : v > hi ? hi : v;
-}
-
-function reflectVelocity(ball, nx, ny) {
-  const dot = ball.vx * nx + ball.vy * ny;
-  ball.vx -= 2 * dot * nx;
-  ball.vy -= 2 * dot * ny;
 }
 
 function resizeCanvasToContainer(canvas, ctx) {
@@ -25,56 +34,6 @@ function resizeCanvasToContainer(canvas, ctx) {
   return { width: canvas.clientWidth, height: canvas.clientHeight };
 }
 
-function stepBall(ball, dt, world, grid) {
-  const speed = Math.hypot(ball.vx, ball.vy);
-  const maxStep = Math.max(2, ball.radius * 0.75);
-  const steps = clamp(Math.ceil((speed * dt) / maxStep), 1, 12);
-  const stepDt = dt / steps;
-
-  let destroyed = 0;
-
-  for (let i = 0; i < steps; i++) {
-    ball.x += ball.vx * stepDt;
-    ball.y += ball.vy * stepDt;
-
-    if (ball.x - ball.radius < 0) {
-      ball.x = ball.radius;
-      ball.vx = Math.abs(ball.vx);
-    } else if (ball.x + ball.radius > world.width) {
-      ball.x = world.width - ball.radius;
-      ball.vx = -Math.abs(ball.vx);
-    }
-
-    if (ball.y - ball.radius < 0) {
-      ball.y = ball.radius;
-      ball.vy = Math.abs(ball.vy);
-    } else if (ball.y + ball.radius > world.height) {
-      ball.y = world.height - ball.radius;
-      ball.vy = -Math.abs(ball.vy);
-    }
-
-    const hit = grid.findCircleCollision(ball.x, ball.y, ball.radius);
-    if (hit) {
-      destroyed += ball.type.onBlockHit({ grid, col: hit.col, row: hit.row, ball });
-
-      if (ball.type.bounceOnBlocks) {
-        ball.x += hit.nx * (hit.penetration + 0.01);
-        ball.y += hit.ny * (hit.penetration + 0.01);
-        reflectVelocity(ball, hit.nx, hit.ny);
-      }
-    }
-  }
-
-  return destroyed;
-}
-
-function drawBall(ctx, ball) {
-  ctx.beginPath();
-  ctx.arc(ball.x, ball.y, ball.radius, 0, Math.PI * 2);
-  ctx.fillStyle = ball.type.color ?? "#e2e8f0";
-  ctx.fill();
-}
-
 function main() {
   const canvas = document.querySelector("#game-canvas");
   const patternSelect = document.querySelector("#pattern-select");
@@ -82,6 +41,11 @@ function main() {
   const regenBtn = document.querySelector("#regen-btn");
   const ballTypeSelect = document.querySelector("#balltype-select");
   const addBallBtn = document.querySelector("#addball-btn");
+  const pointsEl = document.querySelector("#points");
+  const upgradeDamageBtn = document.querySelector("#upgrade-damage-btn");
+  const upgradeSpeedBtn = document.querySelector("#upgrade-speed-btn");
+  const saveBtn = document.querySelector("#save-btn");
+  const loadBtn = document.querySelector("#load-btn");
   const statsEl = document.querySelector("#stats");
 
   if (!canvas) throw new Error("Missing #game-canvas");
@@ -92,15 +56,30 @@ function main() {
   const grid = new BlockGrid({ cellSize: 26, cols: 10, rows: 10 });
 
   const state = {
-    points: D(0),
-    balls: [],
     seed: parseSeedToUint32(seedInput?.value),
     pattern: patternSelect?.value ?? "noise",
+    uiMessage: null,
+    uiMessageUntil: 0,
   };
+
+  let player = loadPlayerFromStorage() ?? createDefaultPlayer();
+  player = normalizePlayer(player);
+
+  const game = {
+    balls: [],
+  };
+
+  function setMessage(msg, seconds = 1.6) {
+    state.uiMessage = msg;
+    state.uiMessageUntil = performance.now() + seconds * 1000;
+  }
 
   function regenerate({ reseed = false } = {}) {
     state.pattern = patternSelect?.value ?? "noise";
     state.seed = reseed ? parseSeedToUint32(seedInput?.value) : state.seed;
+
+    player.map.pattern = state.pattern;
+    player.map.seed = state.seed;
 
     grid.generate({
       pattern: state.pattern,
@@ -114,31 +93,93 @@ function main() {
     });
   }
 
-  function addBallAt(x, y, typeId) {
+  function spawnBallAt(x, y, typeId, { free = false } = {}) {
+    const cost = getBallSpawnCost();
+    if (!free && !trySpendPoints(player, cost)) {
+      setMessage(`Not enough points (need ${format(cost)})`);
+      return false;
+    }
+
+    const type = BALL_TYPES[typeId] ?? BALL_TYPES.normal;
+    const damageMult = getDamageMultiplier(player);
+    const speedMult = getSpeedMultiplier(player);
+
     const angle = (-Math.PI / 2) + (Math.random() * 0.6 - 0.3);
-    const speed = 460 + Math.random() * 80;
-    const ball = createBall({
+    const speed = (460 + Math.random() * 80) * speedMult;
+    const ball = Ball.spawn({
       typeId,
       x,
       y,
       speed,
       angleRad: angle,
+      damage: type.baseDamage * damageMult,
     });
-    state.balls.push(ball);
+    game.balls.push(ball);
+    return true;
+  }
+
+  function savePlayerNow({ silent = false } = {}) {
+    player.map.pattern = state.pattern;
+    player.map.seed = state.seed;
+    player.game.balls = game.balls.map((b) => b.toJSONData());
+    player = savePlayerToStorage(player);
+    if (!silent) setMessage("Saved");
+  }
+
+  function loadPlayerNow() {
+    const loaded = loadPlayerFromStorage();
+    if (!loaded) {
+      setMessage("No save found");
+      return false;
+    }
+
+    player = normalizePlayer(loaded);
+
+    state.pattern = player.map.pattern ?? "noise";
+    state.seed = player.map.seed ?? parseSeedToUint32(seedInput?.value);
+
+    if (patternSelect) patternSelect.value = state.pattern;
+    if (seedInput) seedInput.value = player.map.seed === null ? "" : String(player.map.seed);
+
+    game.balls = (player.game.balls ?? []).map(Ball.fromJSONData).filter(Boolean);
+
+    regenerate();
+    if (game.balls.length === 0) {
+      spawnBallAt(world.width * 0.5, world.height * 0.85, "normal", { free: true });
+    }
+
+    setMessage("Loaded");
+    return true;
   }
 
   regenBtn?.addEventListener("click", () => regenerate({ reseed: true }));
   addBallBtn?.addEventListener("click", () => {
     const typeId = ballTypeSelect?.value ?? "normal";
-    addBallAt(world.width * 0.5, world.height * 0.85, typeId);
+    spawnBallAt(world.width * 0.5, world.height * 0.85, typeId);
   });
+  upgradeDamageBtn?.addEventListener("click", () => {
+    const cost = getDamageUpgradeCost(player);
+    if (!trySpendPoints(player, cost)) return setMessage(`Need ${format(cost)}`);
+    player.upgrades.damageLevel += 1;
+    setMessage(`Damage upgraded to L${player.upgrades.damageLevel}`);
+  });
+  upgradeSpeedBtn?.addEventListener("click", () => {
+    const cost = getSpeedUpgradeCost(player);
+    if (!trySpendPoints(player, cost)) return setMessage(`Need ${format(cost)}`);
+    player.upgrades.speedLevel += 1;
+    setMessage(`Speed upgraded to L${player.upgrades.speedLevel}`);
+  });
+
+  saveBtn?.addEventListener("click", savePlayerNow);
+  loadBtn?.addEventListener("click", loadPlayerNow);
+  window.addEventListener("beforeunload", () => savePlayerNow({ silent: true }));
 
   canvas.addEventListener("pointerdown", (e) => {
     const rect = canvas.getBoundingClientRect();
     const x = e.clientX - rect.left;
     const y = e.clientY - rect.top;
     const typeId = ballTypeSelect?.value ?? "normal";
-    addBallAt(x, y, typeId);
+    spawnBallAt(x, y, typeId);
   });
 
   const resizeObserver = new ResizeObserver(() => {
@@ -157,8 +198,22 @@ function main() {
     world.width = width;
     world.height = height;
   }
-  regenerate({ reseed: true });
-  addBallAt(world.width * 0.5, world.height * 0.85, "normal");
+
+  if (patternSelect && player.map.pattern) patternSelect.value = player.map.pattern;
+  if (seedInput && player.map.seed !== null && player.map.seed !== undefined) seedInput.value = String(player.map.seed);
+  state.pattern = player.map.pattern ?? state.pattern;
+  state.seed = player.map.seed ?? state.seed;
+
+  regenerate({ reseed: player.map.seed === null || player.map.seed === undefined });
+
+  game.balls = (player.game.balls ?? []).map(Ball.fromJSONData).filter(Boolean);
+  if (game.balls.length === 0) {
+    spawnBallAt(world.width * 0.5, world.height * 0.85, "normal", { free: true });
+  }
+
+  setInterval(() => {
+    savePlayerNow({ silent: true });
+  }, 15000);
 
   let lastT = performance.now();
   let fpsSmoothed = 60;
@@ -170,17 +225,40 @@ function main() {
     fpsSmoothed = fpsSmoothed * 0.93 + (1 / Math.max(1e-6, dt)) * 0.07;
 
     let destroyed = 0;
-    for (const ball of state.balls) destroyed += stepBall(ball, dt, world, grid);
-    if (destroyed > 0) state.points = state.points.add(destroyed);
+    for (const ball of game.balls) destroyed += ball.step(dt, world, grid);
+    if (destroyed > 0) addPoints(player, D(destroyed));
 
     ctx.clearRect(0, 0, world.width, world.height);
     grid.draw(ctx);
-    for (const ball of state.balls) drawBall(ctx, ball);
+    for (const ball of game.balls) ball.draw(ctx);
+
+    const spawnCost = getBallSpawnCost();
+    const dmgCost = getDamageUpgradeCost(player);
+    const spdCost = getSpeedUpgradeCost(player);
+
+    if (addBallBtn) {
+      const afford = canAfford(player, spawnCost);
+      addBallBtn.textContent = `Add Ball (-${format(spawnCost)})`;
+      addBallBtn.disabled = !afford;
+    }
+
+    if (pointsEl) pointsEl.textContent = `Points: ${format(getPoints(player))}`;
+    if (upgradeDamageBtn) {
+      upgradeDamageBtn.textContent = `Damage L${player.upgrades.damageLevel} (-${format(dmgCost)})`;
+      upgradeDamageBtn.disabled = !canAfford(player, dmgCost);
+    }
+    if (upgradeSpeedBtn) {
+      upgradeSpeedBtn.textContent = `Speed L${player.upgrades.speedLevel} (-${format(spdCost)})`;
+      upgradeSpeedBtn.disabled = !canAfford(player, spdCost);
+    }
 
     if (statsEl) {
-      statsEl.textContent = `Balls: ${state.balls.length} | Blocks: ${countAliveBlocks(
+      const msg = performance.now() < state.uiMessageUntil ? ` | ${state.uiMessage}` : "";
+      statsEl.textContent = `Balls: ${game.balls.length} | Blocks: ${countAliveBlocks(
         grid
-      )} | Points: ${format(state.points)} | FPS: ${fpsSmoothed.toFixed(0)}`;
+      )} | DPS: x${getDamageMultiplier(player).toFixed(2)} | Speed: x${getSpeedMultiplier(
+        player
+      ).toFixed(2)} | FPS: ${fpsSmoothed.toFixed(0)}${msg}`;
     }
 
     requestAnimationFrame(frame);
