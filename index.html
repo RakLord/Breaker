@@ -3,6 +3,8 @@
   <head>
     <meta charset="UTF-8" />
     <title>Breaker</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link rel="stylesheet" href="./style.css" />
   </head>
   <body>
     <div id="app-shell">
@@ -12,7 +14,40 @@
 
       <main id="game-root">
         <section id="layer-nav"></section>
-        <section id="layers-container"></section>
+        <section id="layers-container">
+          <div id="game-hud">
+            <div class="hud-group">
+              <label>
+                Pattern
+                <select id="pattern-select">
+                  <option value="noise" selected>Noise</option>
+                  <option value="checker">Checker</option>
+                  <option value="stripes">Stripes</option>
+                  <option value="diamond">Diamond</option>
+                </select>
+              </label>
+              <label>
+                Seed
+                <input id="seed-input" type="text" placeholder="random" />
+              </label>
+              <button id="regen-btn" type="button">Regenerate</button>
+            </div>
+
+            <div class="hud-group">
+              <label>
+                Ball Type
+                <select id="balltype-select">
+                  <option value="normal" selected>Normal</option>
+                  <option value="splash">Splash</option>
+                </select>
+              </label>
+              <button id="addball-btn" type="button">Add Ball</button>
+              <div id="stats"></div>
+            </div>
+          </div>
+
+          <canvas id="game-canvas"></canvas>
+        </section>
       </main>
     </div>
     <script type="module" src="./main.js"></script>
