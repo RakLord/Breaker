@@ -1,5 +1,6 @@
 import { defineConfig } from 'vite'
 
 export default defineConfig(({ command }) => ({
-  base: command === 'build' ? '/Unsure/' : '/',
+  // Relative base avoids hardcoding the repo name (GitHub Pages serves at /<repo>/).
+  base: command === 'build' ? './' : '/',
 }))
