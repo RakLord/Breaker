@@ -246,9 +246,9 @@ button:disabled {
   gap: 10px;
 }
 
-.ball-card-header {
+.ball-summary {
   display: flex;
-  align-items: baseline;
+  align-items: center;
   justify-content: space-between;
   gap: 10px;
 }
@@ -257,6 +257,16 @@ button:disabled {
   font-size: 13px;
   color: rgba(241, 245, 249, 0.9);
   letter-spacing: 0.2px;
+}
+
+.ball-details {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.ball-card.card-collapsed .ball-details {
+  display: none;
 }
 
 .ball-count {

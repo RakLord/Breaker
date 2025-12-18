@@ -265,25 +265,30 @@ function main() {
         : "";
 
     card.innerHTML = `
-      <div class="ball-card-header">
+      <div class="ball-summary">
         <div class="ball-name">${type.name}</div>
-        <div class="ball-count">Count: <span data-role="count">0</span>/<span data-role="cap">0</span></div>
-      </div>
-      <div class="ball-actions">
         <button type="button" data-action="buy"><span class="btn-label">Buy</span> <span class="btn-cost" data-role="buy-cost">(0)</span></button>
-        <div class="upgrade-row">
-          <div class="upgrade-level">Lv <span data-role="dmg-lvl">1</span></div>
-          <button type="button" data-action="dmg-up"><span class="btn-label">+1 Damage</span> <span class="btn-cost" data-role="dmg-cost">(0)</span></button>
-        </div>
-        <div class="upgrade-row">
-          <div class="upgrade-level">Lv <span data-role="spd-lvl">1</span></div>
-          <button type="button" data-action="spd-up"><span class="btn-label">+1 Speed</span> <span class="btn-cost" data-role="spd-cost">(0)</span></button>
-        </div>
-        ${rangeRow}
       </div>
-      <div class="ball-stats">
-        <div>Damage: <span data-role="damage">0</span></div>
-        <div>Speed: <span data-role="speed">x1.00</span></div>
+
+      <div class="ball-details">
+        <div class="ball-count">Count: <span data-role="count">0</span>/<span data-role="cap">0</span></div>
+
+        <div class="ball-actions">
+          <div class="upgrade-row">
+            <div class="upgrade-level">Lv <span data-role="dmg-lvl">1</span></div>
+            <button type="button" data-action="dmg-up"><span class="btn-label">+1 Damage</span> <span class="btn-cost" data-role="dmg-cost">(0)</span></button>
+          </div>
+          <div class="upgrade-row">
+            <div class="upgrade-level">Lv <span data-role="spd-lvl">1</span></div>
+            <button type="button" data-action="spd-up"><span class="btn-label">+1 Speed</span> <span class="btn-cost" data-role="spd-cost">(0)</span></button>
+          </div>
+          ${rangeRow}
+        </div>
+
+        <div class="ball-stats">
+          <div>Damage: <span data-role="damage">0</span></div>
+          <div>Speed: <span data-role="speed">x1.00</span></div>
+        </div>
       </div>
     `;
 
@@ -442,6 +447,8 @@ function main() {
       const spdCost = getBallSpeedUpgradeCost(player, typeId);
       const cap = getBallCap(typeId);
       const buyCost = getBallBuyCost(typeId, count);
+
+      card.classList.toggle("card-collapsed", count === 0 && !shouldReveal(buyCost));
 
       const countEl = card.querySelector('[data-role="count"]');
       if (countEl) countEl.textContent = String(count);
