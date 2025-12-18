@@ -149,77 +149,91 @@
                 <div id="star-board-title" class="modal-title">Star Board</div>
                 <button id="star-board-close" type="button" class="modal-close" aria-label="Close">X</button>
               </div>
-              <div class="modal-body">
-                <div id="star-board-balance"></div>
+              <div class="modal-body stars-layout">
+                <div id="star-board-balance" class="stars-balance-card"></div>
 
-                <div class="modal-upgrade">
-                  <div class="modal-upgrade-title">Tier 1 (1 Star each)</div>
-                  <div class="modal-upgrade-sub">Unlock new ball upgrade rows permanently.</div>
-                  <div class="upgrade-row">
-                    <div class="upgrade-level"><span id="star-piece-state">-</span></div>
-                    <button id="star-piece-buy" type="button">
-                      <span class="btn-label">Unlock Piece Count</span>
-                      <span class="btn-cost">(1)</span>
-                    </button>
-                  </div>
-                  <div class="upgrade-row">
-                    <div class="upgrade-level"><span id="star-crit-state">-</span></div>
-                    <button id="star-crit-buy" type="button">
-                      <span class="btn-label">Unlock Critical Hits</span>
-                      <span class="btn-cost">(1)</span>
-                    </button>
-                  </div>
-                  <div class="upgrade-row">
-                    <div class="upgrade-level"><span id="star-exec-state">-</span></div>
-                    <button id="star-exec-buy" type="button">
-                      <span class="btn-label">Unlock Execution</span>
-                      <span class="btn-cost">(1)</span>
-                    </button>
+                <div class="stars-section" id="star-tier1-box">
+                  <div class="stars-section-title">Tier 1 • Core Unlocks</div>
+                  <div class="stars-section-sub">Unlock new ball upgrade rows permanently.</div>
+                  <div class="stars-upgrades">
+                    <div class="stars-upgrade-row">
+                      <div class="stars-upgrade-level"><span id="star-piece-state">-</span></div>
+                      <button id="star-piece-buy" type="button" class="stars-upgrade-btn">
+                        <span class="stars-icon" aria-hidden="true">🧩</span>
+                        <span class="btn-label">Unlock Piece Count</span>
+                        <span class="btn-cost">(1)</span>
+                      </button>
+                    </div>
+                    <div class="stars-upgrade-row">
+                      <div class="stars-upgrade-level"><span id="star-crit-state">-</span></div>
+                      <button id="star-crit-buy" type="button" class="stars-upgrade-btn">
+                        <span class="stars-icon" aria-hidden="true">🎯</span>
+                        <span class="btn-label">Unlock Critical Hits</span>
+                        <span class="btn-cost">(1)</span>
+                      </button>
+                    </div>
+                    <div class="stars-upgrade-row">
+                      <div class="stars-upgrade-level"><span id="star-exec-state">-</span></div>
+                      <button id="star-exec-buy" type="button" class="stars-upgrade-btn">
+                        <span class="stars-icon" aria-hidden="true">⚡</span>
+                        <span class="btn-label">Unlock Execution</span>
+                        <span class="btn-cost">(1)</span>
+                      </button>
+                    </div>
                   </div>
                 </div>
 
-                <div class="modal-upgrade hidden" id="star-tier2-box">
-                  <div class="modal-upgrade-title">Tier 2 (3 Stars each)</div>
-                  <div class="modal-upgrade-sub">Deeper upgrades unlocked after Tier 1.</div>
-                  <div class="upgrade-row">
-                    <div class="upgrade-level"><span id="star-piececap-state">0/2</span></div>
-                    <button id="star-piececap-buy" type="button">
-                      <span class="btn-label">+1 Piece Cap</span>
-                      <span class="btn-cost">(3)</span>
-                    </button>
-                  </div>
-                  <div class="upgrade-row">
-                    <div class="upgrade-level"><span id="star-clearslog-state">-</span></div>
-                    <button id="star-clearslog-buy" type="button">
-                      <span class="btn-label">More Clears</span>
-                      <span class="btn-cost">(3)</span>
-                    </button>
-                  </div>
-                  <div class="upgrade-row">
-                    <div class="upgrade-level"><span id="star-dmgmult-state">-</span></div>
-                    <button id="star-dmgmult-buy" type="button">
-                      <span class="btn-label">Damage Multi</span>
-                      <span class="btn-cost">(3)</span>
-                    </button>
-                  </div>
-                  <div class="upgrade-row">
-                    <div class="upgrade-level"><span id="star-persist-state">-</span></div>
-                    <button id="star-persist-buy" type="button">
-                      <span class="btn-label">Persistance</span>
-                      <span class="btn-cost">(3)</span>
-                    </button>
+                <div class="stars-section hidden" id="star-tier2-box">
+                  <div class="stars-section-title">Tier 2 • Expansion</div>
+                  <div class="stars-section-sub">Deeper upgrades unlocked after Tier 1.</div>
+                  <div class="stars-upgrades">
+                    <div class="stars-upgrade-row">
+                      <div class="stars-upgrade-level"><span id="star-piececap-state">0/2</span></div>
+                      <button id="star-piececap-buy" type="button" class="stars-upgrade-btn">
+                        <span class="stars-icon" aria-hidden="true">➕</span>
+                        <span class="btn-label">+1 Piece Cap</span>
+                        <span class="btn-cost">(3)</span>
+                      </button>
+                    </div>
+                    <div class="stars-upgrade-row">
+                      <div class="stars-upgrade-level"><span id="star-clearslog-state">-</span></div>
+                      <button id="star-clearslog-buy" type="button" class="stars-upgrade-btn">
+                        <span class="stars-icon" aria-hidden="true">📈</span>
+                        <span class="btn-label">More Clears</span>
+                        <span class="btn-cost">(3)</span>
+                      </button>
+                    </div>
+                    <div class="stars-upgrade-row">
+                      <div class="stars-upgrade-level"><span id="star-dmgmult-state">-</span></div>
+                      <button id="star-dmgmult-buy" type="button" class="stars-upgrade-btn">
+                        <span class="stars-icon" aria-hidden="true">💥</span>
+                        <span class="btn-label">Damage Multi</span>
+                        <span class="btn-cost">(3)</span>
+                      </button>
+                    </div>
+                    <div class="stars-upgrade-row">
+                      <div class="stars-upgrade-level"><span id="star-persist-state">-</span></div>
+                      <button id="star-persist-buy" type="button" class="stars-upgrade-btn">
+                        <span class="stars-icon" aria-hidden="true">🔒</span>
+                        <span class="btn-label">Persistance</span>
+                        <span class="btn-cost">(3)</span>
+                      </button>
+                    </div>
                   </div>
                 </div>
 
-                <div class="modal-upgrade hidden" id="star-tier3-box">
-                  <div class="modal-upgrade-title">Tier 3</div>
-                  <div class="modal-upgrade-sub">Meta upgrades unlocked after Tier 2.</div>
-                  <div class="upgrade-row">
-                    <div class="upgrade-level"><span id="star-advpersist-state">-</span></div>
-                    <button id="star-advpersist-buy" type="button">
-                      <span class="btn-label">Advanced Persistance</span>
-                      <span class="btn-cost">(5)</span>
-                    </button>
+                <div class="stars-section hidden" id="star-tier3-box">
+                  <div class="stars-section-title">Tier 3 • Meta</div>
+                  <div class="stars-section-sub">Meta upgrades unlocked after Tier 2.</div>
+                  <div class="stars-upgrades">
+                    <div class="stars-upgrade-row">
+                      <div class="stars-upgrade-level"><span id="star-advpersist-state">-</span></div>
+                      <button id="star-advpersist-buy" type="button" class="stars-upgrade-btn">
+                        <span class="stars-icon" aria-hidden="true">🌟</span>
+                        <span class="btn-label">Advanced Persistance</span>
+                        <span class="btn-cost">(5)</span>
+                      </button>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -233,36 +247,46 @@
                 <div id="stars-modal-title" class="modal-title">Stars</div>
                 <button id="stars-modal-close" type="button" class="modal-close" aria-label="Close">X</button>
               </div>
-              <div class="modal-body">
-                <div id="stars-balance"></div>
+              <div class="modal-body stars-layout stars-modal-body">
+                <div id="stars-balance" class="stars-balance-card"></div>
 
-                <div class="modal-upgrade">
-                  <div class="modal-upgrade-title">Star Prestige</div>
-                  <div class="modal-upgrade-sub">At Level 20 you can reset points/clears/balls and all lower upgrades to gain +1 Star.</div>
-                  <div class="upgrade-row">
-                    <div class="upgrade-level"></div>
-                    <button id="stars-prestige-btn" type="button" class="glow-white">
-                      <span class="btn-label">Gain +1 Star (Reset)</span>
-                      <span class="btn-cost" id="stars-prestige-req">(Lv 20)</span>
-                    </button>
+                <div class="stars-section">
+                  <div class="stars-section-title">Stats</div>
+                  <div class="stars-stats-grid">
+                    <div class="stars-pill">
+                      <div class="stars-pill-label">Prestiges</div>
+                      <div class="stars-pill-value" id="stars-stats-line1"></div>
+                    </div>
+                    <div class="stars-pill">
+                      <div class="stars-pill-label">Last Level</div>
+                      <div class="stars-pill-value" id="stars-stats-line2"></div>
+                    </div>
+                    <div class="stars-pill">
+                      <div class="stars-pill-label">Earned</div>
+                      <div class="stars-pill-value" id="stars-stats-line3"></div>
+                    </div>
                   </div>
                 </div>
 
-                <div class="modal-upgrade">
-                  <div class="modal-upgrade-title">Stats</div>
-                  <div class="modal-upgrade-sub" id="stars-stats-line1"></div>
-                  <div class="modal-upgrade-sub" id="stars-stats-line2"></div>
-                </div>
-
-                <div class="modal-upgrade">
-                  <div class="modal-upgrade-title">Star Board</div>
-                  <div class="modal-upgrade-sub">Spend Stars to permanently unlock mechanics.</div>
-                  <div class="upgrade-row">
-                    <div class="upgrade-level"></div>
-                    <button id="stars-open-board-btn" type="button">
-                      <span class="btn-label">Open Star Board</span>
-                      <span class="btn-cost">→</span>
-                    </button>
+                <div class="stars-section">
+                  <div class="stars-section-title">Actions</div>
+                  <div class="stars-actions">
+                    <div class="stars-action">
+                      <button id="stars-prestige-btn" type="button" class="stars-action-btn glow-white">
+                        <span class="stars-icon" aria-hidden="true">✨</span>
+                        <span class="btn-label">Gain +1 Star (Reset)</span>
+                        <span class="btn-cost" id="stars-prestige-req">(Lv 20)</span>
+                      </button>
+                      <div class="stars-action-desc">Reset points/clears/balls and lower upgrades to gain a Star.</div>
+                    </div>
+                    <div class="stars-action">
+                      <button id="stars-open-board-btn" type="button" class="stars-action-btn">
+                        <span class="stars-icon" aria-hidden="true">🛠️</span>
+                        <span class="btn-label">Open Star Board</span>
+                        <span class="btn-cost">→</span>
+                      </button>
+                      <div class="stars-action-desc">Spend Stars to permanently unlock mechanics.</div>
+                    </div>
                   </div>
                 </div>
               </div>

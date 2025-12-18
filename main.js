@@ -141,6 +141,7 @@ function main() {
   const clearsPrestigeGainEl = document.querySelector("#clears-prestige-gain");
   const clearsStatsLine1El = document.querySelector("#clears-stats-line1");
   const clearsStatsLine2El = document.querySelector("#clears-stats-line2");
+  const clearsStatsLine3El = document.querySelector("#clears-stats-line3");
   const clearsOpenShopBtn = document.querySelector("#clears-open-shop-btn");
 
   const starBoardModal = document.querySelector("#star-board-modal");
@@ -174,6 +175,7 @@ function main() {
   const starsPrestigeReqEl = document.querySelector("#stars-prestige-req");
   const starsStatsLine1El = document.querySelector("#stars-stats-line1");
   const starsStatsLine2El = document.querySelector("#stars-stats-line2");
+  const starsStatsLine3El = document.querySelector("#stars-stats-line3");
   const starsOpenBoardBtn = document.querySelector("#stars-open-board-btn");
 
   if (!canvas) throw new Error("Missing #game-canvas");
@@ -1321,7 +1323,14 @@ function main() {
       starBoardBalanceEl.textContent = `Stars: ${stars} | ${tier1}`;
     }
 
-    if (clearsBalanceEl || clearsPrestigeBtn || clearsPrestigeGainEl || clearsStatsLine1El || clearsStatsLine2El) {
+    if (
+      clearsBalanceEl ||
+      clearsPrestigeBtn ||
+      clearsPrestigeGainEl ||
+      clearsStatsLine1El ||
+      clearsStatsLine2El ||
+      clearsStatsLine3El
+    ) {
       ensureClearsStats();
       const buffered = Math.max(0, (player.clearsBuffered ?? 0) | 0);
       const bufferedBricks = Math.max(0, (player.clearsBufferedBricks ?? 0) | 0);
@@ -1334,15 +1343,12 @@ function main() {
       }
       if (clearsPrestigeGainEl) clearsPrestigeGainEl.textContent = `(+${gain})`;
       if (clearsPrestigeBtn) clearsPrestigeBtn.disabled = buffered <= 0;
-      if (clearsStatsLine1El) {
-        clearsStatsLine1El.textContent = `Prestiges: ${player.clearsStats.prestiges ?? 0} | Last gain: +${player.clearsStats.lastGain ?? 0}`;
-      }
-      if (clearsStatsLine2El) {
-        clearsStatsLine2El.textContent = `Best gain: +${player.clearsStats.bestGain ?? 0}`;
-      }
+      if (clearsStatsLine1El) clearsStatsLine1El.textContent = `${player.clearsStats.prestiges ?? 0}`;
+      if (clearsStatsLine2El) clearsStatsLine2El.textContent = `+${player.clearsStats.lastGain ?? 0}`;
+      if (clearsStatsLine3El) clearsStatsLine3El.textContent = `+${player.clearsStats.bestGain ?? 0}`;
     }
 
-    if (starsBalanceEl || starsPrestigeBtn || starsPrestigeReqEl || starsStatsLine1El || starsStatsLine2El) {
+    if (starsBalanceEl || starsPrestigeBtn || starsPrestigeReqEl || starsStatsLine1El || starsStatsLine2El || starsStatsLine3El) {
       ensureStarsState();
       const stars = Math.max(0, (player.stars ?? 0) | 0);
       const ok = canStarPrestige();
@@ -1353,14 +1359,12 @@ function main() {
       }
       if (starsPrestigeBtn) starsPrestigeBtn.disabled = !ok;
       if (starsPrestigeReqEl) starsPrestigeReqEl.textContent = ok ? "Ready" : "Lv 20";
-      if (starsStatsLine1El) {
-        const prestiges = Math.max(0, (player.starStats?.prestiges ?? 0) | 0);
-        starsStatsLine1El.textContent = `Star prestiges: ${prestiges}`;
-      }
-      if (starsStatsLine2El) {
-        const last = player.starStats?.lastPrestigeLevel;
-        starsStatsLine2El.textContent = `Last prestige level: ${Number.isFinite(last) ? last : "-"}`;
-      }
+      const prestiges = Math.max(0, (player.starStats?.prestiges ?? 0) | 0);
+      const last = player.starStats?.lastPrestigeLevel;
+      const earned = Math.max(0, (player.starStats?.earnedTotal ?? 0) | 0);
+      if (starsStatsLine1El) starsStatsLine1El.textContent = `${prestiges}`;
+      if (starsStatsLine2El) starsStatsLine2El.textContent = Number.isFinite(last) ? `${last}` : "-";
+      if (starsStatsLine3El) starsStatsLine3El.textContent = `${earned}`;
     }
 
     const setStarOwned = (el, owned) => {
