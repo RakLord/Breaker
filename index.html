@@ -32,6 +32,7 @@
               <button id="hard-reset-btn" type="button">Hard Reset</button>
               <button id="clears-shop-btn" type="button">Clears</button>
               <button id="star-board-btn" type="button">Stars</button>
+              <button id="export-import-btn" type="button">Export / Import</button>
               <div id="stats"></div>
             </div>
           </div>
@@ -287,6 +288,41 @@
                       </button>
                       <div class="stars-action-desc">Spend Stars to permanently unlock mechanics.</div>
                     </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div id="export-import-modal" class="modal hidden" aria-hidden="true">
+            <div class="modal-backdrop" data-action="close"></div>
+            <div class="modal-panel" role="dialog" aria-modal="true" aria-labelledby="export-import-title">
+              <div class="modal-header">
+                <div id="export-import-title" class="modal-title">Export / Import Save</div>
+                <button id="export-import-close" type="button" class="modal-close" aria-label="Close">X</button>
+              </div>
+              <div class="modal-body export-import-layout">
+                <div class="modal-upgrade">
+                  <div class="modal-upgrade-title">Export</div>
+                  <div class="modal-upgrade-sub">Copy this encoded string to back up your current progress.</div>
+                  <textarea id="export-save-text" class="export-text" readonly></textarea>
+                  <div class="upgrade-row">
+                    <div class="upgrade-level"></div>
+                    <button id="export-save-copy-btn" type="button">
+                      <span class="btn-label">Copy</span>
+                    </button>
+                  </div>
+                </div>
+
+                <div class="modal-upgrade">
+                  <div class="modal-upgrade-title">Import</div>
+                  <div class="modal-upgrade-sub">Paste an encoded save string here and load it. This will overwrite current progress.</div>
+                  <textarea id="import-save-text" class="export-text" placeholder="Paste encoded save string here"></textarea>
+                  <div class="upgrade-row">
+                    <div class="upgrade-level"></div>
+                    <button id="import-save-load-btn" type="button">
+                      <span class="btn-label">Import</span>
+                    </button>
                   </div>
                 </div>
               </div>

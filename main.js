@@ -177,6 +177,13 @@ function main() {
   const starsStatsLine2El = document.querySelector("#stars-stats-line2");
   const starsStatsLine3El = document.querySelector("#stars-stats-line3");
   const starsOpenBoardBtn = document.querySelector("#stars-open-board-btn");
+  const exportImportBtn = document.querySelector("#export-import-btn");
+  const exportImportModal = document.querySelector("#export-import-modal");
+  const exportImportCloseBtn = document.querySelector("#export-import-close");
+  const exportSaveText = document.querySelector("#export-save-text");
+  const importSaveText = document.querySelector("#import-save-text");
+  const exportSaveCopyBtn = document.querySelector("#export-save-copy-btn");
+  const importSaveLoadBtn = document.querySelector("#import-save-load-btn");
 
   if (!canvas) throw new Error("Missing #game-canvas");
   const ctx = canvas.getContext("2d");
@@ -238,6 +245,50 @@ function main() {
     grid.resize(cols, cols);
     grid.originX = 0;
     grid.originY = 0;
+  }
+
+  function buildPlayerSnapshot() {
+    const snapshot = normalizePlayer({
+      ...player,
+      game: {
+        ...(player.game ?? {}),
+        balls: game.balls.map((b) => b.toJSONData()),
+        grid: grid.toJSONData(),
+        initialBlocks: state.initialBlocks,
+      },
+    });
+    snapshot.meta = snapshot.meta || {};
+    snapshot.meta.lastSavedAt = Date.now();
+    return snapshot;
+  }
+
+  function base64EncodeUtf8(str) {
+    try {
+      const bytes = new TextEncoder().encode(str);
+      let binary = "";
+      bytes.forEach((b) => (binary += String.fromCharCode(b)));
+      return btoa(binary);
+    } catch {
+      try {
+        return btoa(unescape(encodeURIComponent(str)));
+      } catch {
+        return "";
+      }
+    }
+  }
+
+  function base64DecodeUtf8(str) {
+    try {
+      const binary = atob(str);
+      const bytes = Uint8Array.from(binary, (c) => c.charCodeAt(0));
+      return new TextDecoder().decode(bytes);
+    } catch {
+      try {
+        return decodeURIComponent(escape(atob(str)));
+      } catch {
+        return null;
+      }
+    }
   }
 
   function getPieceCountForLevel(level) {
@@ -328,6 +379,26 @@ function main() {
   function setMessage(msg, seconds = 1.6) {
     state.uiMessage = msg;
     state.uiMessageUntil = performance.now() + seconds * 1000;
+  }
+
+  function applyLoadedPlayer(rawPlayer) {
+    if (!rawPlayer) return false;
+    player = normalizePlayer(rawPlayer);
+    ensureCursorState(player);
+    ensureGenerationSettings(player);
+    ensureClearsUpgrades(player);
+    ensureClearsStats();
+    ensureStarsState();
+    updateGridFromPlayer();
+    window.player = player;
+
+    game.balls = (player.game.balls ?? []).map(Ball.fromJSONData).filter(Boolean);
+    if (!tryRestoreGridFromPlayerSave()) regenerate();
+    if (game.balls.length === 0) {
+      spawnBallAt(world.width * 0.5, world.height * 0.85, "normal", { free: true });
+    }
+    applyUpgradesToAllBalls();
+    return true;
   }
 
   function ensureProgress() {
@@ -438,14 +509,13 @@ function main() {
   }
 
   function savePlayerNow({ silent = false } = {}) {
-    player.game.balls = game.balls.map((b) => b.toJSONData());
-    player.game.grid = grid.toJSONData();
-    player.game.initialBlocks = state.initialBlocks;
-    player = savePlayerToStorage(player);
+    const snapshot = buildPlayerSnapshot();
+    player = savePlayerToStorage(snapshot);
     ensureGenerationSettings(player);
     ensureClearsUpgrades(player);
     window.player = player;
     if (!silent) setMessage("Saved");
+    return player;
   }
 
   function loadPlayerNow() {
@@ -454,19 +524,7 @@ function main() {
       setMessage("No save found");
       return false;
     }
-
-    player = normalizePlayer(loaded);
-    ensureCursorState(player);
-    ensureGenerationSettings(player);
-    ensureClearsUpgrades(player);
-    updateGridFromPlayer();
-    window.player = player;
-
-    game.balls = (player.game.balls ?? []).map(Ball.fromJSONData).filter(Boolean);
-    if (!tryRestoreGridFromPlayerSave()) regenerate();
-    if (game.balls.length === 0) spawnBallAt(world.width * 0.5, world.height * 0.85, "normal", { free: true });
-    applyUpgradesToAllBalls();
-
+    applyLoadedPlayer(loaded);
     setMessage("Loaded");
     return true;
   }
@@ -728,6 +786,78 @@ function main() {
     starsModal.setAttribute("aria-hidden", "true");
   }
 
+  function openExportImportModal() {
+    if (!exportImportModal) return;
+    const encoded = base64EncodeUtf8(JSON.stringify(buildPlayerSnapshot()));
+    if (exportSaveText) {
+      exportSaveText.value = encoded;
+      exportSaveText.focus();
+      exportSaveText.select();
+    }
+    exportImportModal.classList.remove("hidden");
+    exportImportModal.setAttribute("aria-hidden", "false");
+  }
+
+  function closeExportImportModal() {
+    if (!exportImportModal) return;
+    exportImportModal.classList.add("hidden");
+    exportImportModal.setAttribute("aria-hidden", "true");
+  }
+
+  async function copyExportString() {
+    if (!exportSaveText) return;
+    const text = exportSaveText.value.trim();
+    if (!text) return setMessage("Nothing to copy");
+    try {
+      if (navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(text);
+      } else {
+        exportSaveText.select();
+        document.execCommand("copy");
+      }
+      setMessage("Save copied");
+    } catch {
+      try {
+        exportSaveText.select();
+        document.execCommand("copy");
+        setMessage("Save copied");
+      } catch {
+        setMessage("Copy failed");
+      }
+    }
+  }
+
+  function importSaveString() {
+    const raw = importSaveText?.value?.trim();
+    if (!raw) {
+      setMessage("Paste a save string first");
+      return false;
+    }
+    const cleaned = raw.replace(/\s+/g, "");
+    const decoded = base64DecodeUtf8(cleaned);
+    if (!decoded) {
+      setMessage("Invalid save string");
+      return false;
+    }
+    let parsed = null;
+    try {
+      parsed = JSON.parse(decoded);
+    } catch {
+      setMessage("Invalid save string");
+      return false;
+    }
+    const ok = applyLoadedPlayer(parsed);
+    if (!ok) {
+      setMessage("Import failed");
+      return false;
+    }
+    savePlayerNow({ silent: true });
+    if (importSaveText) importSaveText.value = "";
+    if (exportSaveText) exportSaveText.value = base64EncodeUtf8(JSON.stringify(buildPlayerSnapshot()));
+    setMessage("Save imported");
+    return true;
+  }
+
   function getMaxDensityLevel() {
     ensureGenerationSettings(player);
     const baseThreshold = player.generation.noiseThreshold;
@@ -878,6 +1008,7 @@ function main() {
   saveBtn?.addEventListener("click", savePlayerNow);
   loadBtn?.addEventListener("click", loadPlayerNow);
   hardResetBtn?.addEventListener("click", hardResetNow);
+  exportImportBtn?.addEventListener("click", openExportImportModal);
   clearsShopBtn?.addEventListener("click", openClearsModal);
   starBoardBtn?.addEventListener("click", openStarsModal);
   clearsModalCloseBtn?.addEventListener("click", closeClearsModal);
@@ -978,12 +1109,25 @@ function main() {
     const target = e.target;
     if (target?.dataset?.action === "close") closeStarBoard();
   });
+  exportImportCloseBtn?.addEventListener("click", closeExportImportModal);
+  exportImportModal?.addEventListener("click", (e) => {
+    const target = e.target;
+    if (target?.dataset?.action === "close") closeExportImportModal();
+  });
+  exportSaveCopyBtn?.addEventListener("click", () => {
+    copyExportString();
+  });
+  importSaveLoadBtn?.addEventListener("click", () => {
+    const ok = importSaveString();
+    if (ok) closeExportImportModal();
+  });
   window.addEventListener("keydown", (e) => {
     if (e.key !== "Escape") return;
     closeClearsShop();
     closeStarBoard();
     closeClearsModal();
     closeStarsModal();
+    closeExportImportModal();
   });
   clearsDensityBuyBtn?.addEventListener("click", () => {
     ensureClearsUpgrades(player);

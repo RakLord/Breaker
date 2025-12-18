@@ -751,6 +751,29 @@ button.glow-white:not(:disabled):hover {
   font-size: 16px;
   filter: drop-shadow(0 0 6px rgba(108, 163, 255, 0.7));
 }
+
+.export-import-layout {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 14px;
+}
+
+.export-text {
+  width: 100%;
+  min-height: 96px;
+  padding: 10px 12px;
+  border-radius: 14px;
+  border: 1px solid rgba(125, 179, 255, 0.5);
+  background: linear-gradient(180deg, rgba(36, 62, 115, 0.3), rgba(13, 25, 52, 0.85));
+  box-shadow:
+    0 10px 26px rgba(0, 0, 0, 0.45),
+    inset 0 0 20px rgba(106, 169, 255, 0.22);
+  color: #e7eeff;
+  font-family: "SFMono-Regular", Menlo, Consolas, monospace;
+  font-size: 12px;
+  line-height: 1.4;
+  resize: vertical;
+}
 .modal-close {
   width: 34px;
   min-width: 34px;
