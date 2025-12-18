@@ -448,7 +448,8 @@ function main() {
       const cap = getBallCap(typeId);
       const buyCost = getBallBuyCost(typeId, count);
 
-      card.classList.toggle("card-collapsed", count === 0 && !shouldReveal(buyCost));
+      const unlocked = count > 0;
+      card.classList.toggle("card-collapsed", !unlocked && !shouldReveal(buyCost));
 
       const countEl = card.querySelector('[data-role="count"]');
       if (countEl) countEl.textContent = String(count);
@@ -477,8 +478,6 @@ function main() {
         if (lvlEl) lvlEl.textContent = String(typeState.damageLevel + 1);
         const costEl = card.querySelector('[data-role="dmg-cost"]');
         if (costEl) costEl.textContent = `(${formatInt(dmgCost)})`;
-        const row = dmgBtn.closest(".upgrade-row");
-        if (row) row.classList.toggle("upgrade-hidden", !shouldReveal(dmgCost));
       }
       const spdBtn = card.querySelector('button[data-action="spd-up"]');
       if (spdBtn) {
@@ -487,8 +486,6 @@ function main() {
         if (lvlEl) lvlEl.textContent = String(typeState.speedLevel + 1);
         const costEl = card.querySelector('[data-role="spd-cost"]');
         if (costEl) costEl.textContent = `(${formatInt(spdCost)})`;
-        const row = spdBtn.closest(".upgrade-row");
-        if (row) row.classList.toggle("upgrade-hidden", !shouldReveal(spdCost));
       }
 
       if (typeId === "splash") {
@@ -502,8 +499,6 @@ function main() {
 
         const btn = card.querySelector('button[data-action="rng-up"]');
         if (btn) btn.disabled = typeState.rangeLevel >= cap || !canAfford(player, cost);
-        const row = btn?.closest(".upgrade-row");
-        if (row) row.classList.toggle("upgrade-hidden", !(typeState.rangeLevel >= cap || shouldReveal(cost)));
       }
     }
 
