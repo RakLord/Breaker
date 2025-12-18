@@ -5,7 +5,7 @@ const SAVE_VERSION = 1;
 
 export const BALL_SHOP_CONFIG = {
   normal: { cap: 10, baseCost: D(50), costGrowth: D(1.18) },
-  splash: { cap: 10, baseCost: D(500), costGrowth: D(1.22) },
+  splash: { cap: 5, baseCost: D(200), costGrowth: D(1.22) },
   sniper: { cap: 5, baseCost: D(2500), costGrowth: D(1.25) },
   sweeper: { cap: 5, baseCost: D(10000), costGrowth: D(1.24) },
 };
@@ -61,6 +61,7 @@ export function createDefaultPlayer() {
       criticalHits: false,
       execution: false,
       clearsLogMult: false,
+      damageMulti: false,
     },
     ballTypes: {},
     cursor: {
@@ -169,6 +170,7 @@ export function normalizePlayer(raw) {
     criticalHits: !!rawStarUpgrades.criticalHits,
     execution: !!rawStarUpgrades.execution,
     clearsLogMult: !!rawStarUpgrades.clearsLogMult,
+    damageMulti: !!rawStarUpgrades.damageMulti,
   };
 
   const rawBallTypes = raw.ballTypes && typeof raw.ballTypes === "object" ? raw.ballTypes : {};

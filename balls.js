@@ -15,7 +15,7 @@ export const BALL_TYPES = {
     name: "Splash",
     color: "#38bdf8",
     radius: 7,
-    baseDamage: 0.8,
+    baseDamage: 2,
     bounceOnBlocks: true,
     splashRadiusCells: 1,
     splashFalloff: 0.55,
@@ -37,7 +37,7 @@ export const BALL_TYPES = {
     name: "Sniper",
     color: "#fbbf24",
     radius: 6,
-    baseDamage: 1.25,
+    baseDamage: 10,
     bounceOnBlocks: true,
     onBlockHit({ grid, col, row, ball }) {
       return grid.applyDamageCell(col, row, ball.damage).damageDealt;

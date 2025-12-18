@@ -152,6 +152,7 @@ function main() {
   const starCritStateEl = document.querySelector("#star-crit-state");
   const starExecStateEl = document.querySelector("#star-exec-state");
   const starClearsLogStateEl = document.querySelector("#star-clearslog-state");
+  const starDmgMultStateEl = document.querySelector("#star-dmgmult-state");
   const starTier2Box = document.querySelector("#star-tier2-box");
 
   const starPieceBuyBtn = document.querySelector("#star-piece-buy");
@@ -159,6 +160,7 @@ function main() {
   const starCritBuyBtn = document.querySelector("#star-crit-buy");
   const starExecBuyBtn = document.querySelector("#star-exec-buy");
   const starClearsLogBuyBtn = document.querySelector("#star-clearslog-buy");
+  const starDmgMultBuyBtn = document.querySelector("#star-dmgmult-buy");
 
   const starsModal = document.querySelector("#stars-modal");
   const starsModalCloseBtn = document.querySelector("#stars-modal-close");
@@ -261,6 +263,7 @@ function main() {
     const pieceCapLevel = getPieceUpgradeCapLevel();
     const critUnlocked = getStarUpgradeOwned("criticalHits");
     const execUnlocked = getStarUpgradeOwned("execution");
+    const starDamageMult = getStarUpgradeOwned("damageMulti") ? 2 : 1;
 
     for (const typeId of Object.keys(BALL_TYPES)) {
       const typeState = ensureBallTypeState(player, typeId);
@@ -293,10 +296,10 @@ function main() {
       }
       if (!Number.isFinite(ball.data.baseDamage)) {
         const currentDamage = Number.isFinite(ball.damage) ? ball.damage : (ball.type?.baseDamage ?? 1);
-        ball.data.baseDamage = damageMult > 0 ? currentDamage / damageMult : currentDamage;
+        ball.data.baseDamage = damageMult > 0 ? currentDamage / (damageMult * starDamageMult) : currentDamage;
       }
 
-      const desiredDamage = ball.data.baseDamage * damageMult;
+      const desiredDamage = ball.data.baseDamage * damageMult * starDamageMult;
       if (Number.isFinite(desiredDamage) && ball.damage !== desiredDamage) ball.damage = desiredDamage;
 
       const desiredSpeed = ball.data.baseSpeed * speedMult;
@@ -404,6 +407,7 @@ function main() {
     const type = BALL_TYPES[typeId] ?? BALL_TYPES.normal;
     const typeState = ensureBallTypeState(player, type.id);
     const damageMult = getBallDamageMultiplier(player, type.id);
+    const starDamageMult = getStarUpgradeOwned("damageMulti") ? 2 : 1;
     const speedMult = getBallSpeedMultiplier(player, type.id);
 
     const angle = (-Math.PI / 2) + (Math.random() * 0.6 - 0.3);
@@ -414,7 +418,7 @@ function main() {
       y,
       speed,
       angleRad: angle,
-      damage: type.baseDamage * damageMult,
+      damage: type.baseDamage * starDamageMult * damageMult,
       data: { baseSpeed: speed / (speedMult || 1), baseDamage: type.baseDamage },
     });
     if (type.id === "splash") {
@@ -531,9 +535,10 @@ function main() {
         criticalHits: false,
         execution: false,
         clearsLogMult: false,
+        damageMulti: false,
       };
     }
-    for (const k of ["pieceCount", "criticalHits", "execution", "clearsLogMult"]) {
+    for (const k of ["pieceCount", "criticalHits", "execution", "clearsLogMult", "damageMulti"]) {
       player.starUpgrades[k] = !!player.starUpgrades[k];
     }
     player.starUpgrades.pieceCap = Math.max(0, Math.min(2, (player.starUpgrades.pieceCap ?? 0) | 0));
@@ -898,6 +903,11 @@ function main() {
     if (buyStarUpgrade("clearsLogMult", 5)) setMessage("More Clears unlocked");
     else setMessage("Need 5 Stars");
   });
+  starDmgMultBuyBtn?.addEventListener("click", () => {
+    if (!anyTier1Bought()) return setMessage("Buy a Tier 1 upgrade first");
+    if (buyStarUpgrade("damageMulti", 5)) setMessage("Damage Multi unlocked");
+    else setMessage("Need 5 Stars");
+  });
   cursorUpgradeBtn?.addEventListener("click", () => {
     const cost = getCursorUpgradeCost(player);
     if (!trySpendPoints(player, cost)) return setMessage(`Need ${formatInt(cost)}`);
@@ -1061,6 +1071,7 @@ function main() {
       const type = BALL_TYPES[typeId] ?? BALL_TYPES.normal;
       const typeState = ensureBallTypeState(player, typeId);
       const dmgMult = getBallDamageMultiplier(player, typeId);
+      const starDamageMult = getStarUpgradeOwned("damageMulti") ? 2 : 1;
       const spdMult = getBallSpeedMultiplier(player, typeId);
       const dmgCost = getBallDamageUpgradeCost(player, typeId);
       const spdCost = getBallSpeedUpgradeCost(player, typeId);
@@ -1075,7 +1086,7 @@ function main() {
       const capEl = card.querySelector('[data-role="cap"]');
       if (capEl) capEl.textContent = String(cap);
       const dmgEl = card.querySelector('[data-role="damage"]');
-      if (dmgEl) dmgEl.textContent = (type.baseDamage * dmgMult).toFixed(2);
+      if (dmgEl) dmgEl.textContent = (type.baseDamage * starDamageMult * dmgMult).toFixed(2);
       const spdEl = card.querySelector('[data-role="speed"]');
       if (spdEl) spdEl.textContent = `x${spdMult.toFixed(2)}`;
       if (typeId === "splash") {
@@ -1313,6 +1324,7 @@ function main() {
     setStarOwned(starCritStateEl, getStarUpgradeOwned("criticalHits"));
     setStarOwned(starExecStateEl, getStarUpgradeOwned("execution"));
     setStarOwned(starClearsLogStateEl, getStarUpgradeOwned("clearsLogMult"));
+    setStarOwned(starDmgMultStateEl, getStarUpgradeOwned("damageMulti"));
 
     const starsNow = Math.max(0, (player.stars ?? 0) | 0);
     if (starPieceBuyBtn) starPieceBuyBtn.disabled = getStarUpgradeOwned("pieceCount") || starsNow < 1;
@@ -1328,6 +1340,7 @@ function main() {
     }
     if (starClearsLogBuyBtn)
       starClearsLogBuyBtn.disabled = tier2Locked || getStarUpgradeOwned("clearsLogMult") || starsNow < 5;
+    if (starDmgMultBuyBtn) starDmgMultBuyBtn.disabled = tier2Locked || getStarUpgradeOwned("damageMulti") || starsNow < 5;
 
     requestAnimationFrame(frame);
   }
