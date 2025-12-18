@@ -150,6 +150,7 @@ function main() {
   const starPieceStateEl = document.querySelector("#star-piece-state");
   const starCritStateEl = document.querySelector("#star-crit-state");
   const starExecStateEl = document.querySelector("#star-exec-state");
+  const starClearsLogStateEl = document.querySelector("#star-clearslog-state");
   const starP1StateEl = document.querySelector("#star-p1-state");
   const starP2StateEl = document.querySelector("#star-p2-state");
   const starP3StateEl = document.querySelector("#star-p3-state");
@@ -157,6 +158,7 @@ function main() {
   const starPieceBuyBtn = document.querySelector("#star-piece-buy");
   const starCritBuyBtn = document.querySelector("#star-crit-buy");
   const starExecBuyBtn = document.querySelector("#star-exec-buy");
+  const starClearsLogBuyBtn = document.querySelector("#star-clearslog-buy");
   const starP1BuyBtn = document.querySelector("#star-p1-buy");
   const starP2BuyBtn = document.querySelector("#star-p2-buy");
   const starP3BuyBtn = document.querySelector("#star-p3-buy");
@@ -482,11 +484,21 @@ function main() {
 
     const buffered = Math.max(0, (player.clearsBuffered ?? 0) | 0);
     ensureClearsStats();
+    player.points = "0";
     player.clearsStats.prestiges += 1;
     player.clearsStats.lastGain = buffered;
     player.clearsStats.bestGain = Math.max(player.clearsStats.bestGain ?? 0, buffered);
-    if (buffered > 0) addClears(player, D(buffered));
+    const bufferedBricks = Math.max(0, (player.clearsBufferedBricks ?? 0) | 0);
+    let gain = buffered;
+    if (getStarUpgradeOwned("clearsLogMult") && buffered > 0) {
+      const mult = Math.max(1, Math.log(Math.max(1, bufferedBricks)));
+      gain = Math.max(0, Math.floor(buffered * mult));
+    }
+    player.clearsStats.lastGain = gain;
+    player.clearsStats.bestGain = Math.max(player.clearsStats.bestGain ?? 0, gain);
+    if (gain > 0) addClears(player, D(gain));
     player.clearsBuffered = 0;
+    player.clearsBufferedBricks = 0;
     ensureClearsUpgrades(player);
 
     player.ballTypes = {};
@@ -513,12 +525,13 @@ function main() {
         pieceCount: false,
         criticalHits: false,
         execution: false,
+        clearsLogMult: false,
         placeholder1: false,
         placeholder2: false,
         placeholder3: false,
       };
     }
-    for (const k of ["pieceCount", "criticalHits", "execution", "placeholder1", "placeholder2", "placeholder3"]) {
+    for (const k of ["pieceCount", "criticalHits", "execution", "clearsLogMult", "placeholder1", "placeholder2", "placeholder3"]) {
       player.starUpgrades[k] = !!player.starUpgrades[k];
     }
 
@@ -546,6 +559,8 @@ function main() {
     player.clearsStats.prestiges = Math.max(0, (player.clearsStats.prestiges ?? 0) | 0);
     player.clearsStats.lastGain = Math.max(0, (player.clearsStats.lastGain ?? 0) | 0);
     player.clearsStats.bestGain = Math.max(0, (player.clearsStats.bestGain ?? 0) | 0);
+    if (!Number.isFinite(player.clearsBufferedBricks)) player.clearsBufferedBricks = 0;
+    player.clearsBufferedBricks = Math.max(0, player.clearsBufferedBricks | 0);
   }
 
   function canStarPrestige() {
@@ -816,7 +831,10 @@ function main() {
   });
   clearsPrestigeBtn?.addEventListener("click", () => {
     const did = prestigeNow();
-    if (did) closeClearsModal();
+    if (did) {
+      closeClearsModal();
+      openClearsShop();
+    }
   });
   clearsOpenShopBtn?.addEventListener("click", () => {
     closeClearsModal();
@@ -851,6 +869,11 @@ function main() {
   });
   const tier1Complete = () =>
     getStarUpgradeOwned("pieceCount") && getStarUpgradeOwned("criticalHits") && getStarUpgradeOwned("execution");
+  starClearsLogBuyBtn?.addEventListener("click", () => {
+    if (!tier1Complete()) return setMessage("Complete Tier 1 first");
+    if (buyStarUpgrade("clearsLogMult", 5)) setMessage("Log Clears Boost unlocked");
+    else setMessage("Need 5 Stars");
+  });
   starP1BuyBtn?.addEventListener("click", () => {
     if (!tier1Complete()) return setMessage("Complete Tier 1 first");
     if (buyStarUpgrade("placeholder1", 5)) setMessage("Placeholder I unlocked");
@@ -987,7 +1010,9 @@ function main() {
     if (aliveBlocks === 0) {
       ensureProgress();
       player.progress.level += 1;
+      ensureClearsStats();
       player.clearsBuffered = Math.max(0, (player.clearsBuffered ?? 0) | 0) + 1;
+      player.clearsBufferedBricks = Math.max(0, (player.clearsBufferedBricks ?? 0) | 0) + (state.initialBlocks | 0);
       regenerate();
       aliveBlocks = countAliveBlocks(grid);
       setMessage(`Level ${player.progress.level} (+1 clear buffered)`);
@@ -1222,10 +1247,15 @@ function main() {
     if (clearsBalanceEl || clearsPrestigeBtn || clearsPrestigeGainEl || clearsStatsLine1El || clearsStatsLine2El) {
       ensureClearsStats();
       const buffered = Math.max(0, (player.clearsBuffered ?? 0) | 0);
+      const bufferedBricks = Math.max(0, (player.clearsBufferedBricks ?? 0) | 0);
+      const hasLogBoost = getStarUpgradeOwned("clearsLogMult");
+      const mult = hasLogBoost ? Math.max(1, Math.log(Math.max(1, bufferedBricks))) : 1;
+      const gain = buffered > 0 ? Math.max(0, Math.floor(buffered * mult)) : 0;
       if (clearsBalanceEl) {
-        clearsBalanceEl.textContent = `Clears: ${formatInt(clearsNow)} | Buffered: +${buffered} | Best: +${player.clearsStats.bestGain ?? 0}`;
+        const boostMsg = hasLogBoost ? ` | Log boost x${mult.toFixed(2)} (bricks ${bufferedBricks})` : "";
+        clearsBalanceEl.textContent = `Clears: ${formatInt(clearsNow)} | Buffered: +${buffered} (${gain})${boostMsg}`;
       }
-      if (clearsPrestigeGainEl) clearsPrestigeGainEl.textContent = `(+${buffered})`;
+      if (clearsPrestigeGainEl) clearsPrestigeGainEl.textContent = `(+${gain})`;
       if (clearsPrestigeBtn) clearsPrestigeBtn.disabled = buffered <= 0;
       if (clearsStatsLine1El) {
         clearsStatsLine1El.textContent = `Prestiges: ${player.clearsStats.prestiges ?? 0} | Last gain: +${player.clearsStats.lastGain ?? 0}`;
@@ -1263,6 +1293,7 @@ function main() {
     setStarOwned(starPieceStateEl, getStarUpgradeOwned("pieceCount"));
     setStarOwned(starCritStateEl, getStarUpgradeOwned("criticalHits"));
     setStarOwned(starExecStateEl, getStarUpgradeOwned("execution"));
+    setStarOwned(starClearsLogStateEl, getStarUpgradeOwned("clearsLogMult"));
     setStarOwned(starP1StateEl, getStarUpgradeOwned("placeholder1"));
     setStarOwned(starP2StateEl, getStarUpgradeOwned("placeholder2"));
     setStarOwned(starP3StateEl, getStarUpgradeOwned("placeholder3"));
@@ -1273,6 +1304,8 @@ function main() {
     if (starExecBuyBtn) starExecBuyBtn.disabled = getStarUpgradeOwned("execution") || starsNow < 1;
 
     const tier2Locked = !tier1Complete();
+    if (starClearsLogBuyBtn)
+      starClearsLogBuyBtn.disabled = tier2Locked || getStarUpgradeOwned("clearsLogMult") || starsNow < 5;
     if (starP1BuyBtn) starP1BuyBtn.disabled = tier2Locked || getStarUpgradeOwned("placeholder1") || starsNow < 5;
     if (starP2BuyBtn) starP2BuyBtn.disabled = tier2Locked || getStarUpgradeOwned("placeholder2") || starsNow < 5;
     if (starP3BuyBtn) starP3BuyBtn.disabled = tier2Locked || getStarUpgradeOwned("placeholder3") || starsNow < 5;

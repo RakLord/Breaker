@@ -49,6 +49,7 @@ export function createDefaultPlayer() {
       lastPrestigeLevel: null,
     },
     clearsBuffered: 0,
+    clearsBufferedBricks: 0,
     clearsUpgrades: {
       densityLevel: 0,
       gridSizeLevel: 0,
@@ -58,6 +59,7 @@ export function createDefaultPlayer() {
       pieceCount: false,
       criticalHits: false,
       execution: false,
+      clearsLogMult: false,
       placeholder1: false,
       placeholder2: false,
       placeholder3: false,
@@ -139,6 +141,7 @@ export function normalizePlayer(raw) {
   const stars =
     typeof raw.stars === "string" || typeof raw.stars === "number" ? Math.max(0, Number.parseInt(raw.stars, 10) || 0) : 0;
   const clearsBuffered = Math.max(0, (raw.clearsBuffered ?? 0) | 0);
+  const clearsBufferedBricks = Math.max(0, (raw.clearsBufferedBricks ?? 0) | 0);
 
   const rawClearsStats = raw.clearsStats && typeof raw.clearsStats === "object" ? raw.clearsStats : {};
   const clearsStats = {
@@ -166,6 +169,7 @@ export function normalizePlayer(raw) {
     pieceCount: !!rawStarUpgrades.pieceCount,
     criticalHits: !!rawStarUpgrades.criticalHits,
     execution: !!rawStarUpgrades.execution,
+    clearsLogMult: !!rawStarUpgrades.clearsLogMult,
     placeholder1: !!rawStarUpgrades.placeholder1,
     placeholder2: !!rawStarUpgrades.placeholder2,
     placeholder3: !!rawStarUpgrades.placeholder3,
@@ -240,6 +244,7 @@ export function normalizePlayer(raw) {
     clearsStats,
     starStats,
     clearsBuffered,
+    clearsBufferedBricks,
     clearsUpgrades: { densityLevel, gridSizeLevel, brickHpLevel },
     starUpgrades,
     ballTypes,
