@@ -7,7 +7,7 @@ export const BALL_SHOP_CONFIG = {
   normal: { cap: 10, baseCost: D(50), costGrowth: D(1.18) },
   splash: { cap: 10, baseCost: D(500), costGrowth: D(1.22) },
   sniper: { cap: 5, baseCost: D(2500), costGrowth: D(1.25) },
-  sweeper: { cap: 5, baseCost: D(1500), costGrowth: D(1.24) },
+  sweeper: { cap: 5, baseCost: D(10000), costGrowth: D(1.24) },
 };
 
 export const CLEARS_SHOP_CONFIG = {
@@ -57,12 +57,10 @@ export function createDefaultPlayer() {
     },
     starUpgrades: {
       pieceCount: false,
+      pieceCap: 0,
       criticalHits: false,
       execution: false,
       clearsLogMult: false,
-      placeholder1: false,
-      placeholder2: false,
-      placeholder3: false,
     },
     ballTypes: {},
     cursor: {
@@ -167,12 +165,10 @@ export function normalizePlayer(raw) {
   const rawStarUpgrades = raw.starUpgrades && typeof raw.starUpgrades === "object" ? raw.starUpgrades : {};
   const starUpgrades = {
     pieceCount: !!rawStarUpgrades.pieceCount,
+    pieceCap: Math.max(0, Math.min(2, (rawStarUpgrades.pieceCap ?? 0) | 0)),
     criticalHits: !!rawStarUpgrades.criticalHits,
     execution: !!rawStarUpgrades.execution,
     clearsLogMult: !!rawStarUpgrades.clearsLogMult,
-    placeholder1: !!rawStarUpgrades.placeholder1,
-    placeholder2: !!rawStarUpgrades.placeholder2,
-    placeholder3: !!rawStarUpgrades.placeholder3,
   };
 
   const rawBallTypes = raw.ballTypes && typeof raw.ballTypes === "object" ? raw.ballTypes : {};
@@ -426,7 +422,7 @@ export function getSplashRangeCap() {
 export function getBallPieceCountUpgradeCost(player, typeId) {
   const level = ensureBallTypeState(player, typeId).pieceLevel;
   const baseCost = BALL_SHOP_CONFIG[typeId]?.baseCost ?? D(100);
-  return baseCost.mul(D(6)).mul(D(2).pow(level));
+  return baseCost.mul(D(12)).mul(D(10).pow(level));
 }
 
 export function getBallCritUpgradeCost(player, typeId) {

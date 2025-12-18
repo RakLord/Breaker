@@ -148,20 +148,17 @@ function main() {
   const starBoardBalanceEl = document.querySelector("#star-board-balance");
 
   const starPieceStateEl = document.querySelector("#star-piece-state");
+  const starPieceCapStateEl = document.querySelector("#star-piececap-state");
   const starCritStateEl = document.querySelector("#star-crit-state");
   const starExecStateEl = document.querySelector("#star-exec-state");
   const starClearsLogStateEl = document.querySelector("#star-clearslog-state");
-  const starP1StateEl = document.querySelector("#star-p1-state");
-  const starP2StateEl = document.querySelector("#star-p2-state");
-  const starP3StateEl = document.querySelector("#star-p3-state");
+  const starTier2Box = document.querySelector("#star-tier2-box");
 
   const starPieceBuyBtn = document.querySelector("#star-piece-buy");
+  const starPieceCapBuyBtn = document.querySelector("#star-piececap-buy");
   const starCritBuyBtn = document.querySelector("#star-crit-buy");
   const starExecBuyBtn = document.querySelector("#star-exec-buy");
   const starClearsLogBuyBtn = document.querySelector("#star-clearslog-buy");
-  const starP1BuyBtn = document.querySelector("#star-p1-buy");
-  const starP2BuyBtn = document.querySelector("#star-p2-buy");
-  const starP3BuyBtn = document.querySelector("#star-p3-buy");
 
   const starsModal = document.querySelector("#stars-modal");
   const starsModalCloseBtn = document.querySelector("#stars-modal-close");
@@ -238,6 +235,12 @@ function main() {
     return clamp(1 + Math.max(0, level | 0), 1, 9);
   }
 
+  function getPieceUpgradeCapLevel() {
+    ensureStarsState();
+    const bonus = Math.max(0, (player.starUpgrades?.pieceCap ?? 0) | 0);
+    return clamp(1 + bonus, 1, 3);
+  }
+
   function getCritChanceForLevel(level) {
     return clamp(Math.max(0, level | 0) * 0.02, 0, 0.5);
   }
@@ -255,6 +258,7 @@ function main() {
     const executeRatioByType = {};
 
     const pieceUnlocked = getStarUpgradeOwned("pieceCount");
+    const pieceCapLevel = getPieceUpgradeCapLevel();
     const critUnlocked = getStarUpgradeOwned("criticalHits");
     const execUnlocked = getStarUpgradeOwned("execution");
 
@@ -262,7 +266,7 @@ function main() {
       const typeState = ensureBallTypeState(player, typeId);
       speedMultByType[typeId] = getBallSpeedMultiplier(player, typeId);
       damageMultByType[typeId] = getBallDamageMultiplier(player, typeId);
-      pieceCountByType[typeId] = pieceUnlocked ? getPieceCountForLevel(typeState.pieceLevel) : 1;
+      pieceCountByType[typeId] = pieceUnlocked ? getPieceCountForLevel(clamp(typeState.pieceLevel, 0, pieceCapLevel)) : 1;
       critChanceByType[typeId] = critUnlocked ? getCritChanceForLevel(typeState.critLevel) : 0;
       executeRatioByType[typeId] = execUnlocked ? getExecuteRatioForLevel(typeState.executionLevel) : 0;
       if (typeId === "splash") {
@@ -523,17 +527,16 @@ function main() {
     if (!player.starUpgrades || typeof player.starUpgrades !== "object") {
       player.starUpgrades = {
         pieceCount: false,
+        pieceCap: 0,
         criticalHits: false,
         execution: false,
         clearsLogMult: false,
-        placeholder1: false,
-        placeholder2: false,
-        placeholder3: false,
       };
     }
-    for (const k of ["pieceCount", "criticalHits", "execution", "clearsLogMult", "placeholder1", "placeholder2", "placeholder3"]) {
+    for (const k of ["pieceCount", "criticalHits", "execution", "clearsLogMult"]) {
       player.starUpgrades[k] = !!player.starUpgrades[k];
     }
+    player.starUpgrades.pieceCap = Math.max(0, Math.min(2, (player.starUpgrades.pieceCap ?? 0) | 0));
 
     if (!player.starStats || typeof player.starStats !== "object") {
       player.starStats = {
@@ -624,6 +627,18 @@ function main() {
     player.stars -= cost;
     player.starStats.spentTotal = Math.max(0, (player.starStats.spentTotal ?? 0) | 0) + cost;
     player.starUpgrades[key] = true;
+    return true;
+  }
+
+  function buyStarUpgradeLevel(key, cost, maxLevel) {
+    ensureStarsState();
+    const current = Math.max(0, (player.starUpgrades?.[key] ?? 0) | 0);
+    const max = Math.max(0, maxLevel | 0);
+    if (current >= max) return false;
+    if (player.stars < cost) return false;
+    player.stars -= cost;
+    player.starStats.spentTotal = Math.max(0, (player.starStats.spentTotal ?? 0) | 0) + cost;
+    player.starUpgrades[key] = current + 1;
     return true;
   }
 
@@ -793,9 +808,12 @@ function main() {
       }
       if (action === "pc-up") {
         if (!getStarUpgradeOwned("pieceCount")) return setMessage("Unlock Piece Count in Star Board");
+        const cap = getPieceUpgradeCapLevel();
+        const state = ensureBallTypeState(player, typeId);
+        if (state.pieceLevel >= cap) return setMessage(`Piece cap reached (Lv ${cap})`);
         const cost = getBallPieceCountUpgradeCost(player, typeId);
         if (!trySpendPoints(player, cost)) return setMessage(`Need ${formatInt(cost)}`);
-        ensureBallTypeState(player, typeId).pieceLevel += 1;
+        state.pieceLevel += 1;
         setMessage(`${typeId} piece count upgraded`);
         return;
       }
@@ -867,26 +885,17 @@ function main() {
     if (buyStarUpgrade("execution", 1)) setMessage("Unlocked Execution upgrades");
     else setMessage("Need 1 Star");
   });
-  const tier1Complete = () =>
-    getStarUpgradeOwned("pieceCount") && getStarUpgradeOwned("criticalHits") && getStarUpgradeOwned("execution");
+  const anyTier1Bought = () =>
+    getStarUpgradeOwned("pieceCount") || getStarUpgradeOwned("criticalHits") || getStarUpgradeOwned("execution");
+  starPieceCapBuyBtn?.addEventListener("click", () => {
+    if (!anyTier1Bought()) return setMessage("Buy a Tier 1 upgrade first");
+    if (!getStarUpgradeOwned("pieceCount")) return setMessage("Unlock Piece Count first");
+    if (buyStarUpgradeLevel("pieceCap", 5, 2)) setMessage("Piece cap increased");
+    else setMessage("Need 5 Stars (or maxed)");
+  });
   starClearsLogBuyBtn?.addEventListener("click", () => {
-    if (!tier1Complete()) return setMessage("Complete Tier 1 first");
-    if (buyStarUpgrade("clearsLogMult", 5)) setMessage("Log Clears Boost unlocked");
-    else setMessage("Need 5 Stars");
-  });
-  starP1BuyBtn?.addEventListener("click", () => {
-    if (!tier1Complete()) return setMessage("Complete Tier 1 first");
-    if (buyStarUpgrade("placeholder1", 5)) setMessage("Placeholder I unlocked");
-    else setMessage("Need 5 Stars");
-  });
-  starP2BuyBtn?.addEventListener("click", () => {
-    if (!tier1Complete()) return setMessage("Complete Tier 1 first");
-    if (buyStarUpgrade("placeholder2", 5)) setMessage("Placeholder II unlocked");
-    else setMessage("Need 5 Stars");
-  });
-  starP3BuyBtn?.addEventListener("click", () => {
-    if (!tier1Complete()) return setMessage("Complete Tier 1 first");
-    if (buyStarUpgrade("placeholder3", 5)) setMessage("Placeholder III unlocked");
+    if (!anyTier1Bought()) return setMessage("Buy a Tier 1 upgrade first");
+    if (buyStarUpgrade("clearsLogMult", 5)) setMessage("More Clears unlocked");
     else setMessage("Need 5 Stars");
   });
   cursorUpgradeBtn?.addEventListener("click", () => {
@@ -1119,13 +1128,15 @@ function main() {
       }
 
       if (pieceUnlocked) {
+        const cap = getPieceUpgradeCapLevel();
+        const atCap = typeState.pieceLevel >= cap;
         const cost = getBallPieceCountUpgradeCost(player, typeId);
         const lvlEl = card.querySelector('[data-role="pc-lvl"]');
-        if (lvlEl) lvlEl.textContent = String(typeState.pieceLevel + 1);
+        if (lvlEl) lvlEl.textContent = atCap ? "MAX" : String(typeState.pieceLevel + 1);
         const costEl = card.querySelector('[data-role="pc-cost"]');
-        if (costEl) costEl.textContent = `(${formatInt(cost)})`;
+        if (costEl) costEl.textContent = atCap ? "(MAX)" : `(${formatInt(cost)})`;
         const btn = card.querySelector('button[data-action="pc-up"]');
-        if (btn) btn.disabled = !canAfford(player, cost);
+        if (btn) btn.disabled = atCap || !canAfford(player, cost);
       }
 
       if (critUnlocked) {
@@ -1151,7 +1162,8 @@ function main() {
       const piecesRow = card.querySelector('[data-role="pieces-row"]');
       if (piecesRow) piecesRow.classList.toggle("hidden", !pieceUnlocked);
       const piecesEl = card.querySelector('[data-role="pieces"]');
-      if (piecesEl && pieceUnlocked) piecesEl.textContent = String(getPieceCountForLevel(typeState.pieceLevel));
+      if (piecesEl && pieceUnlocked)
+        piecesEl.textContent = String(getPieceCountForLevel(clamp(typeState.pieceLevel, 0, getPieceUpgradeCapLevel())));
 
       const critRowEl = card.querySelector('[data-role="crit-row"]');
       if (critRowEl) critRowEl.classList.toggle("hidden", !critUnlocked);
@@ -1237,10 +1249,12 @@ function main() {
     if (starBoardBtn) {
       const stars = Math.max(0, (player.stars ?? 0) | 0);
       starBoardBtn.textContent = `Stars (${stars})`;
+      const level = player.progress?.level ?? 1;
+      starBoardBtn.classList.toggle("hidden", level <= 10);
     }
     if (starBoardBalanceEl) {
       const stars = Math.max(0, (player.stars ?? 0) | 0);
-      const tier1 = tier1Complete() ? "Tier 1 complete" : "Tier 1 incomplete";
+      const tier1 = anyTier1Bought() ? "Tier 2 unlocked" : "Buy a Tier 1 upgrade";
       starBoardBalanceEl.textContent = `Stars: ${stars} | ${tier1}`;
     }
 
@@ -1252,7 +1266,7 @@ function main() {
       const mult = hasLogBoost ? Math.max(1, Math.log(Math.max(1, bufferedBricks))) : 1;
       const gain = buffered > 0 ? Math.max(0, Math.floor(buffered * mult)) : 0;
       if (clearsBalanceEl) {
-        const boostMsg = hasLogBoost ? ` | Log boost x${mult.toFixed(2)} (bricks ${bufferedBricks})` : "";
+        const boostMsg = hasLogBoost ? ` | More Clears x${mult.toFixed(2)} (bricks ${bufferedBricks})` : "";
         clearsBalanceEl.textContent = `Clears: ${formatInt(clearsNow)} | Buffered: +${buffered} (${gain})${boostMsg}`;
       }
       if (clearsPrestigeGainEl) clearsPrestigeGainEl.textContent = `(+${gain})`;
@@ -1291,24 +1305,29 @@ function main() {
       el.textContent = owned ? "✓" : "-";
     };
     setStarOwned(starPieceStateEl, getStarUpgradeOwned("pieceCount"));
+    if (starPieceCapStateEl) {
+      ensureStarsState();
+      const lv = Math.max(0, (player.starUpgrades?.pieceCap ?? 0) | 0);
+      starPieceCapStateEl.textContent = `${Math.min(2, lv)}/2`;
+    }
     setStarOwned(starCritStateEl, getStarUpgradeOwned("criticalHits"));
     setStarOwned(starExecStateEl, getStarUpgradeOwned("execution"));
     setStarOwned(starClearsLogStateEl, getStarUpgradeOwned("clearsLogMult"));
-    setStarOwned(starP1StateEl, getStarUpgradeOwned("placeholder1"));
-    setStarOwned(starP2StateEl, getStarUpgradeOwned("placeholder2"));
-    setStarOwned(starP3StateEl, getStarUpgradeOwned("placeholder3"));
 
     const starsNow = Math.max(0, (player.stars ?? 0) | 0);
     if (starPieceBuyBtn) starPieceBuyBtn.disabled = getStarUpgradeOwned("pieceCount") || starsNow < 1;
     if (starCritBuyBtn) starCritBuyBtn.disabled = getStarUpgradeOwned("criticalHits") || starsNow < 1;
     if (starExecBuyBtn) starExecBuyBtn.disabled = getStarUpgradeOwned("execution") || starsNow < 1;
 
-    const tier2Locked = !tier1Complete();
+    const tier2Locked = !anyTier1Bought();
+    if (starTier2Box) starTier2Box.classList.toggle("hidden", tier2Locked);
+    if (starPieceCapBuyBtn) {
+      ensureStarsState();
+      const lv = Math.max(0, (player.starUpgrades?.pieceCap ?? 0) | 0);
+      starPieceCapBuyBtn.disabled = tier2Locked || lv >= 2 || starsNow < 5;
+    }
     if (starClearsLogBuyBtn)
       starClearsLogBuyBtn.disabled = tier2Locked || getStarUpgradeOwned("clearsLogMult") || starsNow < 5;
-    if (starP1BuyBtn) starP1BuyBtn.disabled = tier2Locked || getStarUpgradeOwned("placeholder1") || starsNow < 5;
-    if (starP2BuyBtn) starP2BuyBtn.disabled = tier2Locked || getStarUpgradeOwned("placeholder2") || starsNow < 5;
-    if (starP3BuyBtn) starP3BuyBtn.disabled = tier2Locked || getStarUpgradeOwned("placeholder3") || starsNow < 5;
 
     requestAnimationFrame(frame);
   }
