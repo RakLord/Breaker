@@ -3,13 +3,23 @@ import { D } from "./numbers.js";
 const SAVE_KEY = "breaker_player_save_v1";
 const SAVE_VERSION = 1;
 
+export const BALL_SHOP_CONFIG = {
+  normal: { cap: 10, baseCost: D(50), costGrowth: D(1.18) },
+  splash: { cap: 10, baseCost: D(500), costGrowth: D(1.22) },
+  sniper: { cap: 5, baseCost: D(2500), costGrowth: D(1.25) },
+};
+
 export function createDefaultPlayer() {
   return {
     version: SAVE_VERSION,
     points: "0",
-    upgrades: {
-      damageLevel: 0,
-      speedLevel: 0,
+    ballTypes: {},
+    cursor: {
+      level: 0,
+    },
+    progress: {
+      level: 1,
+      masterSeed: (Math.random() * 2 ** 32) >>> 0,
     },
     map: {
       pattern: "noise",
@@ -32,14 +42,42 @@ export function normalizePlayer(raw) {
   const version = Number.isFinite(raw.version) ? raw.version : SAVE_VERSION;
   const points = typeof raw.points === "string" || typeof raw.points === "number" ? String(raw.points) : "0";
 
-  const upgrades = raw.upgrades && typeof raw.upgrades === "object" ? raw.upgrades : {};
-  const damageLevel = Math.max(0, (upgrades.damageLevel ?? 0) | 0);
-  const speedLevel = Math.max(0, (upgrades.speedLevel ?? 0) | 0);
+  const rawBallTypes = raw.ballTypes && typeof raw.ballTypes === "object" ? raw.ballTypes : {};
+  const legacyUpgrades = raw.upgrades && typeof raw.upgrades === "object" ? raw.upgrades : null;
+  const legacyDamageLevel = legacyUpgrades ? Math.max(0, (legacyUpgrades.damageLevel ?? 0) | 0) : 0;
+  const legacySpeedLevel = legacyUpgrades ? Math.max(0, (legacyUpgrades.speedLevel ?? 0) | 0) : 0;
+
+  const ballTypes = {};
+  for (const [typeId, cfg] of Object.entries(rawBallTypes)) {
+    if (!typeId) continue;
+    const obj = cfg && typeof cfg === "object" ? cfg : {};
+    ballTypes[typeId] = {
+      damageLevel: Math.max(0, (obj.damageLevel ?? 0) | 0),
+      speedLevel: Math.max(0, (obj.speedLevel ?? 0) | 0),
+    };
+  }
+
+  if (legacyUpgrades && Object.keys(ballTypes).length === 0) {
+    ballTypes.normal = { damageLevel: legacyDamageLevel, speedLevel: legacySpeedLevel };
+  }
+
+  const rawCursor = raw.cursor && typeof raw.cursor === "object" ? raw.cursor : {};
+  const cursorLevel = Math.max(0, (rawCursor.level ?? 0) | 0);
 
   const map = raw.map && typeof raw.map === "object" ? raw.map : {};
   const pattern = typeof map.pattern === "string" ? map.pattern : base.map.pattern;
   const seed =
     map.seed === null || map.seed === undefined || Number.isFinite(map.seed) ? (map.seed ?? null) : base.map.seed;
+
+  const rawProgress = raw.progress && typeof raw.progress === "object" ? raw.progress : {};
+  const level = Math.max(1, (rawProgress.level ?? 1) | 0);
+  const masterSeed = Number.isFinite(rawProgress.masterSeed)
+    ? (rawProgress.masterSeed >>> 0)
+    : Number.isFinite(seed)
+      ? (seed >>> 0)
+      : Number.isFinite(base.progress.masterSeed)
+        ? base.progress.masterSeed
+        : ((Math.random() * 2 ** 32) >>> 0);
 
   const game = raw.game && typeof raw.game === "object" ? raw.game : {};
   const balls = Array.isArray(game.balls) ? game.balls : [];
@@ -51,7 +89,9 @@ export function normalizePlayer(raw) {
   return {
     version,
     points,
-    upgrades: { damageLevel, speedLevel },
+    ballTypes,
+    cursor: { level: cursorLevel },
+    progress: { level, masterSeed },
     map: { pattern, seed },
     game: { balls },
     meta: { createdAt, lastSavedAt },
@@ -80,27 +120,63 @@ export function trySpendPoints(player, costDecimal) {
   return true;
 }
 
-export function getBallSpawnCost() {
-  return D(50);
+export function ensureBallTypeState(player, typeId) {
+  if (!player.ballTypes || typeof player.ballTypes !== "object") player.ballTypes = {};
+  if (!player.ballTypes[typeId]) {
+    player.ballTypes[typeId] = { damageLevel: 0, speedLevel: 0 };
+  }
+  const s = player.ballTypes[typeId];
+  s.damageLevel = Math.max(0, (s.damageLevel ?? 0) | 0);
+  s.speedLevel = Math.max(0, (s.speedLevel ?? 0) | 0);
+  return s;
 }
 
-export function getDamageUpgradeCost(player) {
-  const level = player.upgrades?.damageLevel ?? 0;
-  return D(150).mul(D(1.65).pow(level));
+export function getBallCap(typeId) {
+  return BALL_SHOP_CONFIG[typeId]?.cap ?? 0;
 }
 
-export function getSpeedUpgradeCost(player) {
-  const level = player.upgrades?.speedLevel ?? 0;
-  return D(150).mul(D(1.65).pow(level));
+export function getBallBuyCost(typeId, ownedCount) {
+  const cfg = BALL_SHOP_CONFIG[typeId];
+  if (!cfg) return D(999999999);
+  const n = Math.max(0, ownedCount | 0);
+  return cfg.baseCost.mul(cfg.costGrowth.pow(n));
 }
 
-export function getDamageMultiplier(player) {
-  const level = player.upgrades?.damageLevel ?? 0;
+export function ensureCursorState(player) {
+  if (!player.cursor || typeof player.cursor !== "object") player.cursor = { level: 0 };
+  player.cursor.level = Math.max(0, (player.cursor.level ?? 0) | 0);
+  return player.cursor;
+}
+
+export function getCursorDamage(player) {
+  const level = ensureCursorState(player).level;
+  return 1 + level;
+}
+
+export function getCursorUpgradeCost(player) {
+  const level = ensureCursorState(player).level;
+  return D(100).mul(D(1.6).pow(level));
+}
+
+export function getBallDamageUpgradeCost(player, typeId) {
+  const level = ensureBallTypeState(player, typeId).damageLevel;
+  const baseCost = BALL_SHOP_CONFIG[typeId]?.baseCost ?? D(100);
+  return baseCost.mul(D(1.6).pow(level));
+}
+
+export function getBallSpeedUpgradeCost(player, typeId) {
+  const level = ensureBallTypeState(player, typeId).speedLevel;
+  const baseCost = BALL_SHOP_CONFIG[typeId]?.baseCost ?? D(100);
+  return baseCost.mul(D(1.6).pow(level));
+}
+
+export function getBallDamageMultiplier(player, typeId) {
+  const level = ensureBallTypeState(player, typeId).damageLevel;
   return 1 + 0.25 * level;
 }
 
-export function getSpeedMultiplier(player) {
-  const level = player.upgrades?.speedLevel ?? 0;
+export function getBallSpeedMultiplier(player, typeId) {
+  const level = ensureBallTypeState(player, typeId).speedLevel;
   return 1 + 0.12 * level;
 }
 
@@ -123,3 +199,6 @@ export function loadPlayerFromStorage() {
   }
 }
 
+export function clearPlayerSaveFromStorage() {
+  localStorage.removeItem(SAVE_KEY);
+}

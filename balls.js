@@ -7,7 +7,7 @@ export const BALL_TYPES = {
     baseDamage: 1,
     bounceOnBlocks: true,
     onBlockHit({ grid, col, row, ball }) {
-      return grid.damageCell(col, row, ball.damage);
+      return grid.applyDamageCell(col, row, ball.damage).damageDealt;
     },
   },
   splash: {
@@ -21,15 +21,26 @@ export const BALL_TYPES = {
     splashFalloff: 0.55,
     onBlockHit({ grid, col, row, ball }) {
       const r = ball.splashRadiusCells ?? 1;
-      const destroyedCenter = grid.damageCell(col, row, ball.damage);
-      const destroyedNeighbors = grid.damageRadiusCells(
+      const center = grid.applyDamageCell(col, row, ball.damage);
+      const neighbors = grid.applyDamageRadiusCells(
         col,
         row,
         r,
         ball.damage * (ball.splashFalloff ?? 0.55),
         { includeCenter: false }
       );
-      return destroyedCenter + destroyedNeighbors;
+      return center.damageDealt + neighbors.damageDealt;
+    },
+  },
+  sniper: {
+    id: "sniper",
+    name: "Sniper",
+    color: "#fbbf24",
+    radius: 6,
+    baseDamage: 1.25,
+    bounceOnBlocks: true,
+    onBlockHit({ grid, col, row, ball }) {
+      return grid.applyDamageCell(col, row, ball.damage).damageDealt;
     },
   },
 };
@@ -104,20 +115,38 @@ export class Ball {
       this.x += this.vx * stepDt;
       this.y += this.vy * stepDt;
 
+      let bouncedWall = false;
+
       if (this.x - this.radius < 0) {
         this.x = this.radius;
         this.vx = Math.abs(this.vx);
+        bouncedWall = true;
       } else if (this.x + this.radius > world.width) {
         this.x = world.width - this.radius;
         this.vx = -Math.abs(this.vx);
+        bouncedWall = true;
       }
 
       if (this.y - this.radius < 0) {
         this.y = this.radius;
         this.vy = Math.abs(this.vy);
+        bouncedWall = true;
       } else if (this.y + this.radius > world.height) {
         this.y = world.height - this.radius;
         this.vy = -Math.abs(this.vy);
+        bouncedWall = true;
+      }
+
+      if (bouncedWall && this.typeId === "sniper") {
+        const target = grid.getFarthestAliveBlock(this.x, this.y);
+        if (target) {
+          const speed = Math.hypot(this.vx, this.vy) || 1;
+          const dx = target.x - this.x;
+          const dy = target.y - this.y;
+          const len = Math.hypot(dx, dy) || 1;
+          this.vx = (dx / len) * speed;
+          this.vy = (dy / len) * speed;
+        }
       }
 
       const hit = grid.findCircleCollision(this.x, this.y, this.radius);

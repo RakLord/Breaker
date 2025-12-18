@@ -13,40 +13,24 @@
       </header>
 
       <main id="game-root">
-        <section id="layer-nav"></section>
+        <section id="layer-nav">
+          <div id="sidebar">
+            <div id="points"></div>
+            <div id="ball-list"></div>
+          </div>
+        </section>
         <section id="layers-container">
           <div id="game-hud">
             <div class="hud-group">
-              <label>
-                Pattern
-                <select id="pattern-select">
-                  <option value="noise" selected>Noise</option>
-                  <option value="checker">Checker</option>
-                  <option value="stripes">Stripes</option>
-                  <option value="diamond">Diamond</option>
-                </select>
-              </label>
-              <label>
-                Seed
-                <input id="seed-input" type="text" placeholder="random" />
-              </label>
-              <button id="regen-btn" type="button">Regenerate</button>
+              <div id="hud-title">Shop</div>
+              <div id="hud-level"></div>
             </div>
 
             <div class="hud-group">
-              <label>
-                Ball Type
-                <select id="balltype-select">
-                  <option value="normal" selected>Normal</option>
-                  <option value="splash">Splash</option>
-                </select>
-              </label>
-              <button id="addball-btn" type="button">Add Ball</button>
-              <div id="points"></div>
-              <button id="upgrade-damage-btn" type="button"></button>
-              <button id="upgrade-speed-btn" type="button"></button>
               <button id="save-btn" type="button">Save</button>
               <button id="load-btn" type="button">Load</button>
+              <button id="hard-reset-btn" type="button">Hard Reset</button>
+              <button id="cursor-upgrade-btn" type="button"></button>
               <div id="stats"></div>
             </div>
           </div>

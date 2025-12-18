@@ -62,22 +62,33 @@ export class BlockGrid {
     return col >= 0 && row >= 0 && col < this.cols && row < this.rows;
   }
 
-  damageIndex(index, amount) {
+  applyDamageIndex(index, amount) {
     const prev = this.hp[index];
-    if (prev <= 0) return 0;
+    if (prev <= 0 || amount <= 0) return { damageDealt: 0, destroyed: 0 };
     const next = prev - amount;
     this.hp[index] = next > 0 ? next : 0;
-    return prev > 0 && this.hp[index] <= 0 ? 1 : 0;
+    const damageDealt = prev - this.hp[index];
+    const destroyed = prev > 0 && this.hp[index] <= 0 ? 1 : 0;
+    return { damageDealt, destroyed };
+  }
+
+  applyDamageCell(col, row, amount) {
+    if (!this.inBounds(col, row)) return { damageDealt: 0, destroyed: 0 };
+    return this.applyDamageIndex(this.index(col, row), amount);
+  }
+
+  damageIndex(index, amount) {
+    return this.applyDamageIndex(index, amount).destroyed;
   }
 
   damageCell(col, row, amount) {
-    if (!this.inBounds(col, row)) return 0;
-    return this.damageIndex(this.index(col, row), amount);
+    return this.applyDamageCell(col, row, amount).destroyed;
   }
 
-  damageRadiusCells(centerCol, centerRow, radiusCells, amount, { includeCenter = true } = {}) {
+  applyDamageRadiusCells(centerCol, centerRow, radiusCells, amount, { includeCenter = true } = {}) {
     const r = Math.max(0, radiusCells | 0);
     const r2 = r * r;
+    let damageDealt = 0;
     let destroyed = 0;
 
     const minCol = Math.max(0, centerCol - r);
@@ -91,16 +102,25 @@ export class BlockGrid {
         const dx = col - centerCol;
         if (dx * dx + dy * dy > r2) continue;
         if (!includeCenter && dx === 0 && dy === 0) continue;
-        destroyed += this.damageCell(col, row, amount);
+        const res = this.applyDamageCell(col, row, amount);
+        damageDealt += res.damageDealt;
+        destroyed += res.destroyed;
       }
     }
-    return destroyed;
+    return { damageDealt, destroyed };
+  }
+
+  damageRadiusCells(centerCol, centerRow, radiusCells, amount, { includeCenter = true } = {}) {
+    return this.applyDamageRadiusCells(centerCol, centerRow, radiusCells, amount, { includeCenter }).destroyed;
   }
 
   generate({
     pattern = "noise",
     seed = 1,
     noiseScale = 0.18,
+    // If set (0..1), noise cells are filled when normalizedNoise >= noiseThreshold.
+    // Higher values => more holes (fewer blocks). Takes precedence over `fill` for `pattern: "noise"`.
+    noiseThreshold = null,
     fill = 0.68,
     hpMin = 2,
     hpMax = 10,
@@ -114,6 +134,8 @@ export class BlockGrid {
     const maxFill = clamp(fill, 0, 1);
     const minHp = Math.max(0, hpMin);
     const maxHp = Math.max(minHp, hpMax);
+    const useNoiseThreshold = pattern === "noise" && Number.isFinite(noiseThreshold);
+    const threshold = useNoiseThreshold ? clamp(noiseThreshold, 0, 1) : null;
 
     for (let row = 0; row < filledRows; row++) {
       for (let col = 0; col < this.cols; col++) {
@@ -134,9 +156,17 @@ export class BlockGrid {
           seed,
           noiseScale,
         });
+        const v01 = clamp(v, 0, 1);
 
-        if (v < 1 - maxFill) continue;
-        const t = clamp((v - (1 - maxFill)) / (maxFill || 1), 0, 1);
+        if (threshold !== null) {
+          if (v01 < threshold) continue;
+        } else {
+          if (v01 < 1 - maxFill) continue;
+        }
+
+        const denom = threshold !== null ? Math.max(1e-9, 1 - threshold) : maxFill || 1;
+        const offset = threshold !== null ? threshold : 1 - maxFill;
+        const t = clamp((v01 - offset) / denom, 0, 1);
         const hp = minHp + t * (maxHp - minHp);
 
         const idx = this.index(col, row);
@@ -253,5 +283,91 @@ export class BlockGrid {
     }
 
     ctx.restore();
+  }
+
+  hasAliveBlockWithinRadius(x, y, radiusPx) {
+    const r = Math.max(0, radiusPx);
+    const cell = this.cellSize;
+    const ox = this.originX;
+    const oy = this.originY;
+
+    const minCol = clamp(Math.floor((x - ox - r) / cell), 0, this.cols - 1);
+    const maxCol = clamp(Math.floor((x - ox + r) / cell), 0, this.cols - 1);
+    const minRow = clamp(Math.floor((y - oy - r) / cell), 0, this.rows - 1);
+    const maxRow = clamp(Math.floor((y - oy + r) / cell), 0, this.rows - 1);
+
+    const r2 = r * r;
+    for (let row = minRow; row <= maxRow; row++) {
+      for (let col = minCol; col <= maxCol; col++) {
+        const idx = this.index(col, row);
+        if (this.hp[idx] <= 0) continue;
+
+        const x0 = ox + col * cell;
+        const y0 = oy + row * cell;
+        const x1 = x0 + cell;
+        const y1 = y0 + cell;
+        const closestX = clamp(x, x0, x1);
+        const closestY = clamp(y, y0, y1);
+        const dx = x - closestX;
+        const dy = y - closestY;
+        if (dx * dx + dy * dy <= r2) return true;
+      }
+    }
+
+    return false;
+  }
+
+  getRandomAliveBlockOutsideRadius(x, y, radiusPx) {
+    const r = Math.max(0, radiusPx);
+    const r2 = r * r;
+    const cell = this.cellSize;
+    const ox = this.originX;
+    const oy = this.originY;
+
+    const candidates = [];
+    for (let row = 0; row < this.rows; row++) {
+      for (let col = 0; col < this.cols; col++) {
+        const idx = this.index(col, row);
+        if (this.hp[idx] <= 0) continue;
+
+        const cx = ox + col * cell + cell * 0.5;
+        const cy = oy + row * cell + cell * 0.5;
+        const dx = cx - x;
+        const dy = cy - y;
+        if (dx * dx + dy * dy < r2) continue;
+        candidates.push({ x: cx, y: cy, col, row, index: idx });
+      }
+    }
+
+    if (candidates.length === 0) return null;
+    return candidates[(Math.random() * candidates.length) | 0];
+  }
+
+  getFarthestAliveBlock(x, y) {
+    const cell = this.cellSize;
+    const ox = this.originX;
+    const oy = this.originY;
+
+    let best = null;
+    let bestD2 = -1;
+
+    for (let row = 0; row < this.rows; row++) {
+      for (let col = 0; col < this.cols; col++) {
+        const idx = this.index(col, row);
+        if (this.hp[idx] <= 0) continue;
+
+        const cx = ox + col * cell + cell * 0.5;
+        const cy = oy + row * cell + cell * 0.5;
+        const dx = cx - x;
+        const dy = cy - y;
+        const d2 = dx * dx + dy * dy;
+        if (d2 > bestD2) {
+          bestD2 = d2;
+          best = { x: cx, y: cy, col, row, index: idx };
+        }
+      }
+    }
+
+    return best;
   }
 }
