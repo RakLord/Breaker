@@ -54,6 +54,7 @@ export function normalizePlayer(raw) {
     ballTypes[typeId] = {
       damageLevel: Math.max(0, (obj.damageLevel ?? 0) | 0),
       speedLevel: Math.max(0, (obj.speedLevel ?? 0) | 0),
+      rangeLevel: Math.max(0, (obj.rangeLevel ?? 0) | 0),
     };
   }
 
@@ -123,11 +124,12 @@ export function trySpendPoints(player, costDecimal) {
 export function ensureBallTypeState(player, typeId) {
   if (!player.ballTypes || typeof player.ballTypes !== "object") player.ballTypes = {};
   if (!player.ballTypes[typeId]) {
-    player.ballTypes[typeId] = { damageLevel: 0, speedLevel: 0 };
+    player.ballTypes[typeId] = { damageLevel: 0, speedLevel: 0, rangeLevel: 0 };
   }
   const s = player.ballTypes[typeId];
   s.damageLevel = Math.max(0, (s.damageLevel ?? 0) | 0);
   s.speedLevel = Math.max(0, (s.speedLevel ?? 0) | 0);
+  s.rangeLevel = Math.max(0, (s.rangeLevel ?? 0) | 0);
   return s;
 }
 
@@ -170,6 +172,19 @@ export function getBallSpeedUpgradeCost(player, typeId) {
   return baseCost.mul(D(1.6).pow(level));
 }
 
+export function getSplashRangeLevel(player) {
+  return ensureBallTypeState(player, "splash").rangeLevel;
+}
+
+export function getSplashRangeUpgradeCost(player) {
+  const level = getSplashRangeLevel(player);
+  return D(500).mul(D(5).pow(level));
+}
+
+export function getSplashRangeCap() {
+  return 4;
+}
+
 export function getBallDamageMultiplier(player, typeId) {
   const level = ensureBallTypeState(player, typeId).damageLevel;
   return 1 + 0.25 * level;
@@ -177,7 +192,7 @@ export function getBallDamageMultiplier(player, typeId) {
 
 export function getBallSpeedMultiplier(player, typeId) {
   const level = ensureBallTypeState(player, typeId).speedLevel;
-  return 1 + 0.12 * level;
+  return 1 + 0.24 * level;
 }
 
 export function savePlayerToStorage(player) {

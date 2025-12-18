@@ -17,6 +17,9 @@ import {
   getPoints,
   getBallSpeedMultiplier,
   getBallSpeedUpgradeCost,
+  getSplashRangeCap,
+  getSplashRangeLevel,
+  getSplashRangeUpgradeCost,
   loadPlayerFromStorage,
   normalizePlayer,
   savePlayerToStorage,
@@ -175,6 +178,7 @@ function main() {
     }
 
     const type = BALL_TYPES[typeId] ?? BALL_TYPES.normal;
+    const typeState = ensureBallTypeState(player, type.id);
     const damageMult = getBallDamageMultiplier(player, type.id);
     const speedMult = getBallSpeedMultiplier(player, type.id);
 
@@ -188,6 +192,11 @@ function main() {
       angleRad: angle,
       damage: type.baseDamage * damageMult,
     });
+    if (type.id === "splash") {
+      const baseR = type.splashRadiusCells ?? 1;
+      const bonus = Math.max(0, typeState.rangeLevel | 0);
+      ball.splashRadiusCells = baseR + bonus;
+    }
     game.balls.push(ball);
     return true;
   }
@@ -245,21 +254,32 @@ function main() {
     card.className = "ball-card";
     card.dataset.type = type.id;
 
+    const rangeRow =
+      type.id === "splash"
+        ? `
+        <div class="upgrade-row">
+          <div class="upgrade-level">Lv <span data-role="rng-lvl">1</span></div>
+          <button type="button" data-action="rng-up"><span class="btn-label">+1 Range</span> <span class="btn-cost" data-role="rng-cost">(0)</span></button>
+        </div>
+      `
+        : "";
+
     card.innerHTML = `
       <div class="ball-card-header">
         <div class="ball-name">${type.name}</div>
         <div class="ball-count">Count: <span data-role="count">0</span>/<span data-role="cap">0</span></div>
       </div>
       <div class="ball-actions">
-        <button type="button" data-action="buy">Buy <span class="btn-cost" data-role="buy-cost">(0)</span></button>
+        <button type="button" data-action="buy"><span class="btn-label">Buy</span> <span class="btn-cost" data-role="buy-cost">(0)</span></button>
         <div class="upgrade-row">
           <div class="upgrade-level">Lv <span data-role="dmg-lvl">1</span></div>
-          <button type="button" data-action="dmg-up">+1 Damage <span class="btn-cost" data-role="dmg-cost">(0)</span></button>
+          <button type="button" data-action="dmg-up"><span class="btn-label">+1 Damage</span> <span class="btn-cost" data-role="dmg-cost">(0)</span></button>
         </div>
         <div class="upgrade-row">
           <div class="upgrade-level">Lv <span data-role="spd-lvl">1</span></div>
-          <button type="button" data-action="spd-up">+1 Speed <span class="btn-cost" data-role="spd-cost">(0)</span></button>
+          <button type="button" data-action="spd-up"><span class="btn-label">+1 Speed</span> <span class="btn-cost" data-role="spd-cost">(0)</span></button>
         </div>
+        ${rangeRow}
       </div>
       <div class="ball-stats">
         <div>Damage: <span data-role="damage">0</span></div>
@@ -298,6 +318,17 @@ function main() {
         if (!trySpendPoints(player, cost)) return setMessage(`Need ${formatInt(cost)}`);
         ensureBallTypeState(player, typeId).speedLevel += 1;
         setMessage(`${typeId} speed upgraded`);
+        return;
+      }
+      if (action === "rng-up" && typeId === "splash") {
+        const cap = getSplashRangeCap();
+        const state = ensureBallTypeState(player, "splash");
+        if (state.rangeLevel >= cap) return setMessage(`Splash range max (Lv ${cap})`);
+
+        const cost = getSplashRangeUpgradeCost(player);
+        if (!trySpendPoints(player, cost)) return setMessage(`Need ${formatInt(cost)}`);
+        state.rangeLevel += 1;
+        setMessage(`Splash range upgraded`);
       }
     });
 
@@ -316,6 +347,8 @@ function main() {
   window.addEventListener("beforeunload", () => savePlayerNow({ silent: true }));
 
   canvas.addEventListener("pointerdown", (e) => {
+    e.preventDefault();
+    canvas.setPointerCapture?.(e.pointerId);
     const p = screenToWorld(canvas, view, e.clientX, e.clientY);
     if (p.x < 0 || p.y < 0 || p.x >= world.width || p.y >= world.height) return;
 
@@ -390,6 +423,10 @@ function main() {
       )}</span>`;
     }
 
+    const pointsNow = getPoints(player);
+    const revealThreshold = D(0.75);
+    const shouldReveal = (cost) => pointsNow.gte(cost.mul(revealThreshold));
+
     const countsByType = {};
     for (const ball of game.balls) countsByType[ball.typeId] = (countsByType[ball.typeId] ?? 0) + 1;
     for (const typeId of Object.keys(BALL_TYPES)) {
@@ -414,6 +451,11 @@ function main() {
       if (dmgEl) dmgEl.textContent = (type.baseDamage * dmgMult).toFixed(2);
       const spdEl = card.querySelector('[data-role="speed"]');
       if (spdEl) spdEl.textContent = `x${spdMult.toFixed(2)}`;
+      if (typeId === "splash") {
+        const baseR = type.splashRadiusCells ?? 1;
+        const radius = baseR + (typeState.rangeLevel ?? 0);
+        if (spdEl) spdEl.textContent = `x${spdMult.toFixed(2)} | R${radius}`;
+      }
 
       const buyBtn = card.querySelector('button[data-action="buy"]');
       if (buyBtn) {
@@ -428,6 +470,8 @@ function main() {
         if (lvlEl) lvlEl.textContent = String(typeState.damageLevel + 1);
         const costEl = card.querySelector('[data-role="dmg-cost"]');
         if (costEl) costEl.textContent = `(${formatInt(dmgCost)})`;
+        const row = dmgBtn.closest(".upgrade-row");
+        if (row) row.classList.toggle("upgrade-hidden", !shouldReveal(dmgCost));
       }
       const spdBtn = card.querySelector('button[data-action="spd-up"]');
       if (spdBtn) {
@@ -436,6 +480,23 @@ function main() {
         if (lvlEl) lvlEl.textContent = String(typeState.speedLevel + 1);
         const costEl = card.querySelector('[data-role="spd-cost"]');
         if (costEl) costEl.textContent = `(${formatInt(spdCost)})`;
+        const row = spdBtn.closest(".upgrade-row");
+        if (row) row.classList.toggle("upgrade-hidden", !shouldReveal(spdCost));
+      }
+
+      if (typeId === "splash") {
+        const cap = getSplashRangeCap();
+        const lvlEl = card.querySelector('[data-role="rng-lvl"]');
+        if (lvlEl) lvlEl.textContent = String(typeState.rangeLevel + 1);
+
+        const cost = getSplashRangeUpgradeCost(player);
+        const costEl = card.querySelector('[data-role="rng-cost"]');
+        if (costEl) costEl.textContent = `(${formatInt(cost)})`;
+
+        const btn = card.querySelector('button[data-action="rng-up"]');
+        if (btn) btn.disabled = typeState.rangeLevel >= cap || !canAfford(player, cost);
+        const row = btn?.closest(".upgrade-row");
+        if (row) row.classList.toggle("upgrade-hidden", !(typeState.rangeLevel >= cap || shouldReveal(cost)));
       }
     }
 

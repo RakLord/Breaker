@@ -273,6 +273,10 @@ button:disabled {
 
 .ball-actions button {
   width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
 }
 
 .upgrade-row {
@@ -295,6 +299,22 @@ button:disabled {
   font-variant-numeric: tabular-nums;
 }
 
+.btn-label {
+  color: rgba(241, 245, 249, 0.88);
+}
+
+.upgrade-row.upgrade-hidden .upgrade-level {
+  visibility: hidden;
+}
+
+.upgrade-row.upgrade-hidden .btn-label {
+  display: none;
+}
+
+.upgrade-row.upgrade-hidden button {
+  justify-content: center;
+}
+
 .ball-stats {
   display: grid;
   gap: 4px;
@@ -310,4 +330,8 @@ button:disabled {
   background: rgba(2, 6, 23, 0.22);
   border-radius: 14px;
   box-shadow: 0 22px 60px rgba(0, 0, 0, 0.65);
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-user-drag: none;
 }
