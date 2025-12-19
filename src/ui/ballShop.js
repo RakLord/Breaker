@@ -12,6 +12,7 @@ import {
   getBallPieceCountUpgradeCost,
   getBallSpeedMultiplier,
   getBallSpeedUpgradeCost,
+  getBallSizeUpgradeCost,
   getPoints,
   getSplashRangeCap,
   getSplashRangeUpgradeCost,
@@ -30,6 +31,9 @@ export function ensureBallCard(ctx, typeId) {
   const card = document.createElement("div");
   card.className = "ball-card";
   card.dataset.type = type.id;
+  if (type.id === "heavy" && !ctx.getStarUpgradeOwned("heavyBall")) {
+    card.classList.add("hidden");
+  }
 
   const rangeRow =
     type.id === "splash"
@@ -37,6 +41,15 @@ export function ensureBallCard(ctx, typeId) {
         <div class="upgrade-row">
           <div class="upgrade-level">Lv <span data-role="rng-lvl">1</span></div>
           <button type="button" data-action="rng-up" data-tooltip-key="ball-range"><span class="btn-label">Range</span> <span class="btn-cost" data-role="rng-cost">(0)</span></button>
+        </div>
+      `
+      : "";
+  const sizeRow =
+    type.id === "heavy"
+      ? `
+        <div class="upgrade-row">
+          <div class="upgrade-level">Lv <span data-role="size-lvl">1</span></div>
+          <button type="button" data-action="size-up" data-tooltip-key="ball-size"><span class="btn-label">Size</span> <span class="btn-cost" data-role="size-cost">(0)</span></button>
         </div>
       `
       : "";
@@ -59,6 +72,7 @@ export function ensureBallCard(ctx, typeId) {
             <div class="upgrade-level">Lv <span data-role="spd-lvl">1</span></div>
             <button type="button" data-action="spd-up" data-tooltip-key="ball-speed"><span class="btn-label">Speed</span> <span class="btn-cost" data-role="spd-cost">(0)</span></button>
           </div>
+          ${sizeRow}
           ${rangeRow}
           <div class="upgrade-row hidden" data-upgrade="piece">
             <div class="upgrade-level">Lv <span data-role="pc-lvl">1</span></div>
@@ -117,6 +131,17 @@ export function initBallShopUI(ctx) {
       if (!trySpendPoints(player, cost)) return ctx.setMessage(`Need ${formatInt(cost)}`);
       ensureBallTypeState(player, typeId).speedLevel += 1;
       ctx.setMessage(`${typeId} speed upgraded`);
+      return;
+    }
+    if (action === "size-up" && typeId === "heavy") {
+      const state = ensureBallTypeState(player, typeId);
+      const cap = 10;
+      if (state.sizeLevel >= cap) return ctx.setMessage(`Heavy size max (Lv ${cap})`);
+      const cost = getBallSizeUpgradeCost(player, typeId);
+      if (!trySpendPoints(player, cost)) return ctx.setMessage(`Need ${formatInt(cost)}`);
+      state.sizeLevel += 1;
+      ctx.applyUpgradesToAllBalls?.();
+      ctx.setMessage("Heavy size upgraded");
       return;
     }
     if (action === "rng-up" && typeId === "splash") {
@@ -197,6 +222,11 @@ export function updateBallShopCards(ctx) {
   for (const typeId of Object.keys(BALL_TYPES)) {
     const card = ensureBallCard(ctx, typeId);
     if (!card) continue;
+    if (typeId === "heavy" && !ctx.getStarUpgradeOwned("heavyBall")) {
+      card.classList.add("hidden");
+      continue;
+    }
+    card.classList.remove("hidden");
     const count = countsByType[typeId] ?? 0;
 
     const type = BALL_TYPES[typeId] ?? BALL_TYPES.normal;
@@ -206,10 +236,11 @@ export function updateBallShopCards(ctx) {
     const spdMult = getBallSpeedMultiplier(player, typeId);
     const dmgCost = getBallDamageUpgradeCost(player, typeId);
     const spdCost = getBallSpeedUpgradeCost(player, typeId);
+    const sizeCost = typeId === "heavy" ? getBallSizeUpgradeCost(player, typeId) : null;
     const cap = getBallCap(player, typeId);
     const buyCost = getBallBuyCost(typeId, count);
 
-    const unlocked = count > 0;
+    const unlocked = count > 0 || (typeId === "heavy" && ctx.getStarUpgradeOwned("heavyBall"));
     card.classList.toggle("card-collapsed", !unlocked && !shouldReveal(buyCost));
 
     const countEl = card.querySelector('[data-role="count"]');
@@ -235,9 +266,10 @@ export function updateBallShopCards(ctx) {
 
     const buyBtn = card.querySelector('button[data-action="buy"]');
     if (buyBtn) {
-      buyBtn.disabled = (cap > 0 && count >= cap) || !canAfford(player, buyCost);
+      const atCap = cap > 0 && count >= cap;
+      buyBtn.disabled = atCap || !canAfford(player, buyCost);
       const costEl = buyBtn.querySelector('[data-role="buy-cost"]');
-      if (costEl) costEl.textContent = `(${formatInt(buyCost)})`;
+      if (costEl) costEl.textContent = atCap ? "(MAX)" : `(${formatInt(buyCost)})`;
     }
     const dmgBtn = card.querySelector('button[data-action="dmg-up"]');
     if (dmgBtn) {
@@ -254,6 +286,17 @@ export function updateBallShopCards(ctx) {
       if (lvlEl) lvlEl.textContent = String(typeState.speedLevel + 1);
       const costEl = spdBtn.querySelector('[data-role="spd-cost"]');
       if (costEl) costEl.textContent = `(${formatInt(spdCost)})`;
+    }
+    if (typeId === "heavy") {
+      const sizeBtn = card.querySelector('button[data-action="size-up"]');
+      if (sizeBtn) {
+        const cap = 10;
+        sizeBtn.disabled = typeState.sizeLevel >= cap || !canAfford(player, sizeCost);
+        const lvlEl = card.querySelector('[data-role="size-lvl"]');
+        if (lvlEl) lvlEl.textContent = typeState.sizeLevel >= cap ? "MAX" : String(typeState.sizeLevel + 1);
+        const costEl = sizeBtn.querySelector('[data-role="size-cost"]');
+        if (costEl) costEl.textContent = typeState.sizeLevel >= cap ? "(MAX)" : `(${formatInt(sizeCost)})`;
+      }
     }
 
     if (typeId === "splash") {

@@ -33,6 +33,7 @@ export const BALL_SHOP_CONFIG = {
   splash: { cap: 3, baseCost: D(200), costGrowth: D(1.22) },
   sniper: { cap: 3, baseCost: D(1000), costGrowth: D(1.25) },
   sweeper: { cap: 2, baseCost: D(25000), costGrowth: D(1.24) },
+  heavy: { cap: 2, baseCost: D(30000), costGrowth: D(1.28) },
 };
 
 export const CLEARS_SHOP_CONFIG = {
@@ -90,6 +91,13 @@ export function createDefaultPlayer() {
       damageMulti: false,
       persistence: false,
       advancedPersistence: false,
+      heavyBall: false,
+      starCollapse: false,
+      ballcountPersist: false,
+      betterFormula: 0,
+      betterBasicBalls: false,
+      brickHpBoost: 0,
+      morePoints: 0,
     },
     ballTypes: {},
     cursor: {
@@ -209,6 +217,13 @@ export function normalizePlayer(raw) {
     damageMulti: !!rawStarUpgrades.damageMulti,
     persistence: !!rawStarUpgrades.persistence,
     advancedPersistence: !!rawStarUpgrades.advancedPersistence,
+    heavyBall: !!rawStarUpgrades.heavyBall,
+    starCollapse: !!rawStarUpgrades.starCollapse,
+    ballcountPersist: !!rawStarUpgrades.ballcountPersist,
+    betterFormula: Math.max(0, Math.min(3, (rawStarUpgrades.betterFormula ?? 0) | 0)),
+    betterBasicBalls: !!rawStarUpgrades.betterBasicBalls,
+    brickHpBoost: Math.max(0, Math.min(3, (rawStarUpgrades.brickHpBoost ?? 0) | 0)),
+    morePoints: Math.max(0, Math.min(10, (rawStarUpgrades.morePoints ?? 0) | 0)),
   };
 
   const rawBallTypes = raw.ballTypes && typeof raw.ballTypes === "object" ? raw.ballTypes : {};
@@ -224,6 +239,7 @@ export function normalizePlayer(raw) {
       damageLevel: Math.max(0, (obj.damageLevel ?? 0) | 0),
       speedLevel: Math.max(0, (obj.speedLevel ?? 0) | 0),
       rangeLevel: Math.max(0, (obj.rangeLevel ?? 0) | 0),
+      sizeLevel: Math.max(0, (obj.sizeLevel ?? 0) | 0),
       pieceLevel: Math.max(0, (obj.pieceLevel ?? 0) | 0),
       critLevel: Math.max(0, (obj.critLevel ?? 0) | 0),
       executionLevel: Math.max(0, (obj.executionLevel ?? 0) | 0),
@@ -235,6 +251,7 @@ export function normalizePlayer(raw) {
       damageLevel: legacyDamageLevel,
       speedLevel: legacySpeedLevel,
       rangeLevel: 0,
+      sizeLevel: 0,
       pieceLevel: 0,
       critLevel: 0,
       executionLevel: 0,
@@ -394,6 +411,13 @@ export function getBrickHpUpgradeLevel(player) {
   return ensureClearsUpgrades(player).brickHpLevel;
 }
 
+export function getBrickHpEffectLevel(player) {
+  const base = getBrickHpUpgradeLevel(player);
+  const boost = Math.max(0, Math.min(3, (player.starUpgrades?.brickHpBoost ?? 0) | 0));
+  const mult = 2 ** boost;
+  return base * mult;
+}
+
 export function getBrickHpUpgradeCost(player) {
   const level = getBrickHpUpgradeLevel(player);
   const cfg = CLEARS_SHOP_CONFIG.brickHp;
@@ -407,6 +431,7 @@ export function ensureBallTypeState(player, typeId) {
       damageLevel: 0,
       speedLevel: 0,
       rangeLevel: 0,
+      sizeLevel: 0,
       pieceLevel: 0,
       critLevel: 0,
       executionLevel: 0,
@@ -416,6 +441,7 @@ export function ensureBallTypeState(player, typeId) {
   s.damageLevel = Math.max(0, (s.damageLevel ?? 0) | 0);
   s.speedLevel = Math.max(0, (s.speedLevel ?? 0) | 0);
   s.rangeLevel = Math.max(0, (s.rangeLevel ?? 0) | 0);
+  s.sizeLevel = Math.max(0, (s.sizeLevel ?? 0) | 0);
   s.pieceLevel = Math.max(0, (s.pieceLevel ?? 0) | 0);
   s.critLevel = Math.max(0, (s.critLevel ?? 0) | 0);
   s.executionLevel = Math.max(0, (s.executionLevel ?? 0) | 0);
@@ -432,7 +458,8 @@ export function getBallCap(player, typeId) {
 export function getBallBuyCost(typeId, ownedCount) {
   const cfg = BALL_SHOP_CONFIG[typeId];
   if (!cfg) return D(999999999);
-  const n = Math.max(0, ownedCount | 0);
+  let n = Math.max(0, ownedCount | 0);
+  if (typeId === "heavy") n = Math.max(0, n - 1);
   return cfg.baseCost.mul(cfg.costGrowth.pow(n));
 }
 
@@ -462,6 +489,12 @@ export function getBallSpeedUpgradeCost(player, typeId) {
   const level = ensureBallTypeState(player, typeId).speedLevel;
   const baseCost = BALL_SHOP_CONFIG[typeId]?.baseCost ?? D(100);
   return baseCost.mul(D(1.6).pow(level));
+}
+
+export function getBallSizeUpgradeCost(player, typeId) {
+  const level = ensureBallTypeState(player, typeId).sizeLevel;
+  const baseCost = BALL_SHOP_CONFIG[typeId]?.baseCost ?? D(100);
+  return baseCost.mul(D(2)).mul(D(1.6).pow(level));
 }
 
 export function getSplashRangeLevel(player) {
@@ -512,7 +545,8 @@ export function getBallDamagePerLevel(baseDamage) {
 
 export function getBallDamageValue(player, typeId, baseDamage) {
   const level = ensureBallTypeState(player, typeId).damageLevel;
-  const base = Number.isFinite(baseDamage) ? baseDamage : 0;
+  let base = Number.isFinite(baseDamage) ? baseDamage : 0;
+  if (typeId === "normal" && player?.starUpgrades?.betterBasicBalls) base += 5;
   let perLevel = getBallDamagePerLevel(base);
   if (typeId === "sweeper") perLevel *= 2;
   return base + perLevel * level;

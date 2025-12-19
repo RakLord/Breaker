@@ -58,6 +58,20 @@ export const BALL_TYPES = {
       return hitRes.damageDealt + rowRes.damageDealt;
     },
   },
+  heavy: {
+    id: "heavy",
+    name: "Heavy",
+    color: "#8840a5ff",
+    radius: 12,
+    baseDamage: 100,
+    bounceOnBlocks: true,
+    onBlockHit({ grid, col, row, ball }) {
+      const hitRes = grid.applyDamageCell(col, row, ball.damage);
+      if (!ball.data || typeof ball.data !== "object") ball.data = {};
+      ball.data.skipBounce = hitRes.destroyed > 0;
+      return hitRes.damageDealt;
+    },
+  },
 };
 
 function clamp(v, lo, hi) {
@@ -244,9 +258,11 @@ export class Ball {
           }
         }
 
-        if (this.type.bounceOnBlocks) {
-          this.x += hit.nx * (hit.penetration + 0.01);
-          this.y += hit.ny * (hit.penetration + 0.01);
+        const skipBounce = !!this.data?.skipBounce;
+        if (this.data) this.data.skipBounce = false;
+        this.x += hit.nx * (hit.penetration + 0.01);
+        this.y += hit.ny * (hit.penetration + 0.01);
+        if (this.type.bounceOnBlocks && !skipBounce) {
           reflectVelocity(this, hit.nx, hit.ny);
         }
       }

@@ -10,7 +10,7 @@
     <div id="app-shell">
       <header>
         <h1>Breaker</h1>
-        <div id="app-version">V0.2.2</div>
+        <div id="app-version" role="button" tabindex="0" aria-haspopup="dialog" aria-expanded="false">V0.2.3</div>
       </header>
 
       <main id="game-root">
@@ -150,6 +150,7 @@
             <div class="modal-panel" role="dialog" aria-modal="true" aria-labelledby="star-board-title">
               <div class="modal-header">
                 <div id="star-board-title" class="modal-title">Star Board</div>
+                <div id="star-board-count" class="modal-title">Stars: 0</div>
                 <button id="star-board-close" type="button" class="modal-close" aria-label="Close">X</button>
               </div>
               <div class="modal-body stars-layout">
@@ -191,6 +192,14 @@
                         <span class="btn-cost">(1)</span>
                       </button>
                     </div>
+                    <div class="stars-upgrade-row">
+                      <div class="stars-upgrade-level"><span id="star-persist-state">-</span></div>
+                      <button id="star-persist-buy" type="button" class="stars-upgrade-btn" data-tooltip-key="star-persist">
+                        <span class="stars-icon" aria-hidden="true">P</span>
+                        <span class="btn-label">Persistance</span>
+                        <span class="btn-cost">(3)</span>
+                      </button>
+                    </div>
                   </div>
                 </div>
 
@@ -222,11 +231,24 @@
                         <span class="btn-cost">(3)</span>
                       </button>
                     </div>
+                                        <div class="stars-upgrade-row">
+                      <div class="stars-upgrade-level"><span id="star-advpersist-state">-</span></div>
+                      <button id="star-advpersist-buy" type="button" class="stars-upgrade-btn" data-tooltip-key="star-adv-persist">
+                        <span class="stars-icon" aria-hidden="true">A</span>
+                        <span class="btn-label">Advanced Persistance</span>
+                        <span class="btn-cost">(3)</span>
+                      </button>
+                    </div>
                     <div class="stars-upgrade-row">
-                      <div class="stars-upgrade-level"><span id="star-persist-state">-</span></div>
-                      <button id="star-persist-buy" type="button" class="stars-upgrade-btn" data-tooltip-key="star-persist">
-                        <span class="stars-icon" aria-hidden="true">🔒</span>
-                        <span class="btn-label">Persistance</span>
+                      <div class="stars-upgrade-level"><span id="star-brickboost-state">0/3</span></div>
+                      <button
+                        id="star-brickboost-buy"
+                        type="button"
+                        class="stars-upgrade-btn"
+                        data-tooltip-key="star-brick-boost"
+                      >
+                        <span class="stars-icon" aria-hidden="true">W</span>
+                        <span class="btn-label">Weaker Bricks Boost</span>
                         <span class="btn-cost">(3)</span>
                       </button>
                     </div>
@@ -234,19 +256,82 @@
                 </div>
 
                 <div class="stars-section hidden" id="star-tier3-box">
-                  <div class="stars-section-title">Tier 3 • Meta</div>
+                  <div class="stars-section-title">Tier 3 Meta</div>
                   <div class="stars-section-sub">Meta upgrades unlocked after Tier 2.</div>
                   <div class="stars-upgrades">
                     <div class="stars-upgrade-row">
-                      <div class="stars-upgrade-level"><span id="star-advpersist-state">-</span></div>
-                      <button id="star-advpersist-buy" type="button" class="stars-upgrade-btn" data-tooltip-key="star-adv-persist">
-                        <span class="stars-icon" aria-hidden="true">🌟</span>
-                        <span class="btn-label">Advanced Persistance</span>
+                      <div class="stars-upgrade-level"><span id="star-collapse-state">-</span></div>
+                      <button id="star-collapse-buy" type="button" class="stars-upgrade-btn" data-tooltip-key="star-collapse">
+                        <span class="stars-icon" aria-hidden="true">C</span>
+                        <span class="btn-label">Star Collapse</span>
+                        <span class="btn-cost">(5)</span>
+                      </button>
+                    </div>
+                    <div class="stars-upgrade-row">
+                      <div class="stars-upgrade-level"><span id="star-heavy-state">-</span></div>
+                      <button id="star-heavy-buy" type="button" class="stars-upgrade-btn" data-tooltip-key="star-heavy-ball">
+                        <span class="stars-icon" aria-hidden="true">H</span>
+                        <span class="btn-label">Unlock Heavy Ball</span>
+                        <span class="btn-cost">(5)</span>
+                      </button>
+                    </div>
+                    <div class="stars-upgrade-row">
+                      <div class="stars-upgrade-level"><span id="star-morepoints-state">0/10</span></div>
+                      <button
+                        id="star-morepoints-buy"
+                        type="button"
+                        class="stars-upgrade-btn"
+                        data-tooltip-key="star-more-points"
+                      >
+                        <span class="stars-icon" aria-hidden="true">M</span>
+                        <span class="btn-label">More Points</span>
+                        <span class="btn-cost">(5)</span>
+                      </button>
+                    </div>
+                    <div class="stars-upgrade-row">
+                      <div class="stars-upgrade-level"><span id="star-basic-balls-state">-</span></div>
+                      <button
+                        id="star-basic-balls-buy"
+                        type="button"
+                        class="stars-upgrade-btn"
+                        data-tooltip-key="star-basic-balls"
+                      >
+                        <span class="stars-icon" aria-hidden="true">B</span>
+                        <span class="btn-label">Better Basic Balls</span>
                         <span class="btn-cost">(5)</span>
                       </button>
                     </div>
                   </div>
                 </div>
+
+                <div class="stars-section hidden" id="star-tier4-box">
+                  <div class="stars-section-title">Tier 4 Ascension</div>
+                  <div class="stars-section-sub">Core upgrades unlocked after Tier 3.</div>
+                  <div class="stars-upgrades">
+                    <div class="stars-upgrade-row">
+                      <div class="stars-upgrade-level"><span id="star-ballcount-state">-</span></div>
+                      <button id="star-ballcount-buy" type="button" class="stars-upgrade-btn" data-tooltip-key="star-ballcount">
+                        <span class="stars-icon" aria-hidden="true">B</span>
+                        <span class="btn-label">Balls Persist</span>
+                        <span class="btn-cost">(10)</span>
+                      </button>
+                    </div>
+                    <div class="stars-upgrade-row">
+                      <div class="stars-upgrade-level"><span id="star-better-formula-state">0/3</span></div>
+                      <button
+                        id="star-better-formula-buy"
+                        type="button"
+                        class="stars-upgrade-btn"
+                        data-tooltip-key="star-better-formula"
+                      >
+                        <span class="stars-icon" aria-hidden="true">F</span>
+                        <span class="btn-label">Better Star Formula</span>
+                        <span class="btn-cost">(10)</span>
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
               </div>
             </div>
           </div>
@@ -377,6 +462,15 @@
           >
             <div id="star-reset-progress-fill" class="star-reset-progress-fill"></div>
           </div>
+        </div>
+      </div>
+      <div id="changelog-modal" class="changelog-modal hidden" role="dialog" aria-hidden="true" aria-labelledby="changelog-title">
+        <div class="changelog-panel">
+          <div class="changelog-header">
+            <div id="changelog-title">Changelog</div>
+            <div id="changelog-version" class="changelog-version">V0.2.3</div>
+          </div>
+          <ul id="changelog-list" class="changelog-list"></ul>
         </div>
       </div>
       <div id="toast-container" aria-live="polite" aria-atomic="false"></div>
