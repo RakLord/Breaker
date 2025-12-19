@@ -31,8 +31,8 @@ function coerceDecimalString(value, fallback = "0") {
 export const BALL_SHOP_CONFIG = {
   normal: { cap: 3, baseCost: D(50), costGrowth: D(1.18) },
   splash: { cap: 3, baseCost: D(200), costGrowth: D(1.22) },
-  sniper: { cap: 3, baseCost: D(12500), costGrowth: D(1.25) },
-  sweeper: { cap: 2, baseCost: D(200000), costGrowth: D(1.24) },
+  sniper: { cap: 3, baseCost: D(1000), costGrowth: D(1.25) },
+  sweeper: { cap: 2, baseCost: D(50000), costGrowth: D(1.24) },
 };
 
 export const CLEARS_SHOP_CONFIG = {
@@ -110,6 +110,9 @@ export function createDefaultPlayer() {
       balls: [],
       grid: null,
       initialBlocks: 0,
+    },
+    tutorials: {
+      manualBallToastShown: false,
     },
     meta: {
       createdAt: Date.now(),
@@ -265,6 +268,11 @@ export function normalizePlayer(raw) {
   const createdAt = Number.isFinite(meta.createdAt) ? meta.createdAt : base.meta.createdAt;
   const lastSavedAt = Number.isFinite(meta.lastSavedAt) ? meta.lastSavedAt : null;
 
+  const rawTutorials = raw.tutorials && typeof raw.tutorials === "object" ? raw.tutorials : {};
+  const tutorials = {
+    manualBallToastShown: !!rawTutorials.manualBallToastShown,
+  };
+
   return {
     version,
     points,
@@ -285,6 +293,7 @@ export function normalizePlayer(raw) {
     progress: { level, masterSeed },
     map: { pattern, seed },
     game: { balls, grid, initialBlocks },
+    tutorials,
     meta: { createdAt, lastSavedAt },
   };
 }

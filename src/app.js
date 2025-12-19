@@ -17,8 +17,6 @@ import {
   getBallCap,
   ensureBallTypeState,
   ensureCursorState,
-  getCursorDamage,
-  getCursorUpgradeCost,
   getBallDamageValue,
   getClears,
   getGridSizeUpgradeCost,
@@ -58,7 +56,6 @@ export function startApp() {
     ballContextBtn,
     hpOverlayBtn,
     hudLevelEl,
-    cursorUpgradeBtn,
     statsEl,
     clearsShopModal,
     clearsShopCloseBtn,
@@ -118,6 +115,7 @@ export function startApp() {
     exportImportCloseBtn,
     settingsModal,
     settingsCloseBtn,
+    toastContainer,
     exportSaveText,
     importSaveText,
     exportSaveCopyBtn,
@@ -140,6 +138,7 @@ export function startApp() {
   const worldSize = 1000;
   world.width = worldSize;
   world.height = worldSize;
+  world.cursor = { x: world.width * 0.5, y: world.height * 0.5, active: false };
 
   const grid = new BlockGrid({ cellSize: 56, cols: 10, rows: 10 });
 
@@ -264,6 +263,168 @@ export function startApp() {
     state.uiMessageUntil = performance.now() + seconds * 1000;
   }
 
+  function dismissToast(toast) {
+    if (!toast) return;
+    if (toast._dismissTimer) {
+      clearTimeout(toast._dismissTimer);
+      toast._dismissTimer = null;
+    }
+    toast.remove();
+  }
+
+  function pushToast({ title, message, glowColor = null, timeoutMs = null } = {}) {
+    if (!toastContainer) return null;
+    const safeTitle = title || "Notice";
+    const safeMessage = message || "";
+
+    const toast = document.createElement("div");
+    toast.className = "toast";
+    if (glowColor) {
+      toast.classList.add("toast--glow");
+      toast.style.setProperty("--toast-glow", glowColor);
+    }
+
+    const header = document.createElement("div");
+    header.className = "toast-header";
+
+    const titleEl = document.createElement("div");
+    titleEl.className = "toast-title";
+    titleEl.textContent = safeTitle;
+
+    const closeBtn = document.createElement("button");
+    closeBtn.type = "button";
+    closeBtn.className = "toast-close";
+    closeBtn.setAttribute("aria-label", "Dismiss notification");
+    closeBtn.textContent = "×";
+    closeBtn.addEventListener("click", () => dismissToast(toast));
+
+    header.appendChild(titleEl);
+    header.appendChild(closeBtn);
+
+    const body = document.createElement("div");
+    body.className = "toast-body";
+    body.textContent = safeMessage;
+
+    toast.appendChild(header);
+    toast.appendChild(body);
+    toastContainer.appendChild(toast);
+
+    if (Number.isFinite(timeoutMs) && timeoutMs > 0) {
+      toast._dismissTimer = setTimeout(() => dismissToast(toast), timeoutMs);
+    }
+
+    return toast;
+  }
+
+  function drawManualBallRay(ctx, ball) {
+    if (!ball?.data?.aimAtCursorOnWall) return;
+    if (!world?.cursor?.active) return;
+    const speed = Math.hypot(ball.vx, ball.vy);
+    if (!Number.isFinite(speed) || speed <= 0.01) return;
+
+    const maxDistance = world.width * 1.5;
+    const maxSegments = 8;
+    const radius = Number.isFinite(ball.radius) ? ball.radius : 0;
+    const stepLen = Math.max(2, radius * 0.75);
+    const left = radius;
+    const right = world.width - radius;
+    const top = radius;
+    const bottom = world.height - radius;
+
+    let px = ball.x;
+    let py = ball.y;
+    let vx = ball.vx;
+    let vy = ball.vy;
+    let remaining = maxDistance;
+
+    ctx.save();
+    ctx.beginPath();
+    ctx.moveTo(px, py);
+
+    for (let i = 0; i < maxSegments && remaining > 0; i++) {
+      const currentSpeed = Math.hypot(vx, vy);
+      if (!Number.isFinite(currentSpeed) || currentSpeed <= 0.01) break;
+      const ux = vx / currentSpeed;
+      const uy = vy / currentSpeed;
+
+      const tx = vx > 0 ? (right - px) / vx : vx < 0 ? (left - px) / vx : Infinity;
+      const ty = vy > 0 ? (bottom - py) / vy : vy < 0 ? (top - py) / vy : Infinity;
+      const tHit = Math.min(tx, ty);
+      if (!Number.isFinite(tHit) || tHit <= 0) break;
+
+      const segmentDistance = Math.min(currentSpeed * tHit, remaining);
+      const steps = Math.max(1, Math.ceil(segmentDistance / stepLen));
+      let traveled = 0;
+      let hitBlock = false;
+
+      for (let s = 0; s < steps; s++) {
+        const stepDist = Math.min(stepLen, segmentDistance - traveled);
+        traveled += stepDist;
+        const sx = px + ux * traveled;
+        const sy = py + uy * traveled;
+        if (grid.findCircleCollision(sx, sy, radius)) {
+          ctx.lineTo(sx, sy);
+          remaining = 0;
+          hitBlock = true;
+          break;
+        }
+      }
+
+      if (hitBlock) break;
+
+      px += ux * segmentDistance;
+      py += uy * segmentDistance;
+      ctx.lineTo(px, py);
+      remaining -= segmentDistance;
+
+      if (segmentDistance < currentSpeed * tHit - 1e-6) break;
+
+      const hitVertical = Math.abs(tHit - tx) < 1e-6;
+      const hitHorizontal = Math.abs(tHit - ty) < 1e-6;
+      if (hitVertical) vx = -vx;
+      if (hitHorizontal) vy = -vy;
+
+      const cursor = world?.cursor;
+      if (cursor?.active && Number.isFinite(cursor.x) && Number.isFinite(cursor.y)) {
+        const dx = cursor.x - px;
+        const dy = cursor.y - py;
+        const len = Math.hypot(dx, dy);
+        if (len > 1e-6) {
+          vx = (dx / len) * currentSpeed;
+          vy = (dy / len) * currentSpeed;
+        }
+      }
+    }
+
+    ctx.strokeStyle = "rgba(248, 113, 113, 0.18)";
+    ctx.lineWidth = 1.6;
+    ctx.setLineDash([6, 12]);
+    ctx.stroke();
+    ctx.restore();
+  }
+
+  function maybeShowManualBallToast(aliveBlocks) {
+    const tutorials = ensureTutorialState();
+    if (tutorials.manualBallToastShown) return;
+
+    ensureClearsStats();
+    if ((player.clearsStats?.prestiges ?? 0) !== 0) return;
+
+    const initialBlocks = state.initialBlocks;
+    if (!Number.isFinite(initialBlocks) || initialBlocks <= 0) return;
+    if (!Number.isFinite(aliveBlocks) || aliveBlocks <= 0) return;
+    if (aliveBlocks > initialBlocks * 0.25) return;
+
+    const toast = pushToast({
+      title: "Manual ball tip",
+      message:
+        "The Manual ball aims toward your cursor whenever it bounces off a wall. Use it to clean up leftover blocks.",
+      glowColor: "rgba(248, 113, 113, 0.55)",
+    });
+
+    if (toast) tutorials.manualBallToastShown = true;
+  }
+
   function updateBallContextButton() {
     if (!ballContextBtn) return;
     ballContextBtn.textContent = state.ballContextEnabled ? "Ball Focus: On" : "Ball Focus: Off";
@@ -299,6 +460,7 @@ export function startApp() {
     if (game.balls.length === 0) {
       spawnBallAt(world.width * 0.5, world.height * 0.85, "normal", { free: true });
     }
+    ensureCursorBall();
     applyUpgradesToAllBalls();
     return true;
   }
@@ -370,8 +532,40 @@ export function startApp() {
     return true;
   }
 
+  function ensureCursorBall() {
+    const existing = game.balls.find((ball) => ball?.data?.isCursorBall);
+    if (existing) return existing;
+
+    const type = BALL_TYPES.normal;
+    const speedMult = getBallSpeedMultiplier(player, type.id);
+    const starDamageMult = getStarUpgradeOwned("damageMulti") ? 2 : 1;
+    const baseSpeed = 460 + Math.random() * 80;
+    const speed = baseSpeed * speedMult;
+    const angle = -Math.PI / 2;
+
+    const ball = Ball.spawn({
+      typeId: type.id,
+      x: world.width * 0.5,
+      y: world.height * 0.85,
+      speed,
+      angleRad: angle,
+      damage: getBallDamageValue(player, type.id, type.baseDamage) * starDamageMult,
+      data: {
+        isCursorBall: true,
+        aimAtCursorOnWall: true,
+        baseSpeed,
+        baseDamage: type.baseDamage,
+      },
+    });
+    game.balls.push(ball);
+    return ball;
+  }
+
   function spawnBallAt(x, y, typeId, { free = false } = {}) {
-    const ownedCount = game.balls.reduce((acc, b) => acc + (b.typeId === typeId ? 1 : 0), 0);
+    const ownedCount = game.balls.reduce(
+      (acc, b) => acc + (b.typeId === typeId && !b.data?.isCursorBall ? 1 : 0),
+      0
+    );
     const cap = getBallCap(typeId);
     if (!free && cap > 0 && ownedCount >= cap) {
       setMessage(`${typeId} cap reached (${cap})`);
@@ -447,6 +641,7 @@ export function startApp() {
     game.balls = [];
     regenerate({ reseed: true });
     spawnBallAt(world.width * 0.5, world.height * 0.85, "normal", { free: true });
+    ensureCursorBall();
     applyUpgradesToAllBalls();
     setMessage("Reset complete");
   }
@@ -501,6 +696,7 @@ export function startApp() {
     updateGridFromPlayer();
     regenerate();
     spawnBallAt(world.width * 0.5, world.height * 0.85, "normal", { free: true });
+    ensureCursorBall();
     applyUpgradesToAllBalls();
 
     window.player = player;
@@ -564,6 +760,14 @@ export function startApp() {
     player.clearsBufferedBricks = Math.max(0, player.clearsBufferedBricks | 0);
   }
 
+  function ensureTutorialState() {
+    if (!player.tutorials || typeof player.tutorials !== "object") {
+      player.tutorials = { manualBallToastShown: false };
+    }
+    player.tutorials.manualBallToastShown = !!player.tutorials.manualBallToastShown;
+    return player.tutorials;
+  }
+
   function canStarPrestige() {
     ensureProgress();
     return (player.progress?.level ?? 1) >= 35;
@@ -584,6 +788,7 @@ export function startApp() {
     const keepStars = Math.max(0, (player.stars ?? 0) | 0) + 1;
     const keepStarUpgrades = { ...(player.starUpgrades ?? {}) };
     const keepStarStats = { ...(player.starStats ?? {}) };
+    const keepManualBallToastShown = !!player.tutorials?.manualBallToastShown;
     keepStarStats.prestiges = Math.max(0, (keepStarStats.prestiges ?? 0) | 0) + 1;
     keepStarStats.earnedTotal = Math.max(0, (keepStarStats.earnedTotal ?? 0) | 0) + 1;
     keepStarStats.lastPrestigeLevel = player.progress?.level ?? null;
@@ -592,6 +797,7 @@ export function startApp() {
     player.stars = keepStars;
     player.starUpgrades = keepStarUpgrades;
     player.starStats = keepStarStats;
+    ensureTutorialState().manualBallToastShown = keepManualBallToastShown;
 
     ensureCursorState(player).level = 0;
     ensureGenerationSettings(player);
@@ -606,6 +812,7 @@ export function startApp() {
     game.balls = [];
     regenerate();
     spawnBallAt(world.width * 0.5, world.height * 0.85, "normal", { free: true });
+    ensureCursorBall();
     applyUpgradesToAllBalls();
 
     setMessage("Gained +1 Star");
@@ -898,12 +1105,6 @@ export function startApp() {
     if (buyStarUpgrade("advancedPersistence", 5)) setMessage("Advanced Persistance unlocked");
     else setMessage("Need 5 Stars");
   });
-  cursorUpgradeBtn?.addEventListener("click", () => {
-    const cost = getCursorUpgradeCost(player);
-    if (!trySpendPoints(player, cost)) return setMessage(`Need ${formatInt(cost)}`);
-    ensureCursorState(player).level += 1;
-    setMessage(`Cursor damage upgraded`);
-  });
   clearsShopCloseBtn?.addEventListener("click", closeClearsShop);
   clearsShopModal?.addEventListener("click", (e) => {
     const target = e.target;
@@ -990,21 +1191,14 @@ export function startApp() {
   });
   window.addEventListener("beforeunload", () => savePlayerNow({ silent: true }));
 
-  canvas.addEventListener("pointerdown", (e) => {
-    e.preventDefault();
-    canvas.setPointerCapture?.(e.pointerId);
+  canvas.addEventListener("pointermove", (e) => {
     const p = screenToWorld(canvas, view, e.clientX, e.clientY);
-    if (p.x < 0 || p.y < 0 || p.x >= world.width || p.y >= world.height) return;
-
-    const col = Math.floor((p.x - grid.originX) / grid.cellSize);
-    const row = Math.floor((p.y - grid.originY) / grid.cellSize);
-    if (!grid.inBounds(col, row)) return;
-
-    const damage = getCursorDamage(player);
-    const res = grid.applyDamageCell(col, row, damage);
-    if (res.damageDealt > 0) {
-      addPoints(player, D(res.damageDealt));
-    }
+    world.cursor.x = p.x;
+    world.cursor.y = p.y;
+    world.cursor.active = p.x >= 0 && p.y >= 0 && p.x <= world.width && p.y <= world.height;
+  });
+  canvas.addEventListener("pointerleave", () => {
+    world.cursor.active = false;
   });
 
   const resizeObserver = new ResizeObserver(() => updateCanvasView(canvas, world, view));
@@ -1024,7 +1218,14 @@ export function startApp() {
   if (game.balls.length === 0) {
     spawnBallAt(world.width * 0.5, world.height * 0.85, "normal", { free: true });
   }
+  ensureCursorBall();
   applyUpgradesToAllBalls();
+  pushToast({
+    title: "Welcome back",
+    message: "This notification will auto close after 7s.",
+    glowColor: "rgba(96, 165, 250, 0.55)",
+    timeoutMs: 7000,
+  });
 
   setInterval(() => {
     savePlayerNow({ silent: true });
@@ -1071,8 +1272,10 @@ export function startApp() {
     grid.draw(ctx, { showHp: state.showHpOverlay });
     const showOnlyType = state.ballContextEnabled ? state.ballContextType : null;
     if (showOnlyType) {
+      for (const ball of game.balls) if (ball.typeId === showOnlyType) drawManualBallRay(ctx, ball);
       for (const ball of game.balls) if (ball.typeId === showOnlyType) ball.draw(ctx);
     } else {
+      for (const ball of game.balls) drawManualBallRay(ctx, ball);
       for (const ball of game.balls) ball.draw(ctx);
     }
 
@@ -1083,13 +1286,7 @@ export function startApp() {
     }
 
     updateBallShopCards(ballShopCtx);
-
-    if (cursorUpgradeBtn) {
-      const cost = getCursorUpgradeCost(player);
-      const damage = getCursorDamage(player);
-      cursorUpgradeBtn.textContent = `Cursor DMG ${damage} (+1) (${formatInt(cost)})`;
-      cursorUpgradeBtn.disabled = !canAfford(player, cost);
-    }
+    maybeShowManualBallToast(aliveBlocks);
 
     const clearsNow = getClears(player);
     if (clearsShopBtn) {

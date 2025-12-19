@@ -3,7 +3,6 @@ import tippy from "tippy.js";
 export const TOOLTIP_TEXT = {
   "ball-focus": "Focus view: only show the hovered ball type on the canvas.",
   "cell-hp": "Toggle brick HP numbers on the grid.",
-  "cursor-upgrade": "Increase click damage by +1 per level.",
   "clears-density": "Spend clears to increase brick density.",
   "clears-grid": "Spend clears to shrink cells and fit more bricks.",
   "clears-hp": "Spend clears to reduce starting brick HP.",
@@ -15,7 +14,7 @@ export const TOOLTIP_TEXT = {
   "star-dmg-multi": "Double all ball damage.",
   "star-persist": "Keep normal ball upgrades after prestige.",
   "star-adv-persist": "Keep non-normal ball upgrades after prestige.",
-  "ball-damage": "Increase ball damage by at least +1 per level.",
+  "ball-damage": "Increase ball damage",
   "ball-speed": "Increase ball speed.",
   "ball-range": "Increase splash radius.",
   "ball-propagation": "Increase extra hits after a block is hit.",

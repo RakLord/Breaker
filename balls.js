@@ -193,6 +193,21 @@ export class Ball {
           this.vy = (dy / len) * speed;
         }
       }
+      if (bouncedWall && this.data?.aimAtCursorOnWall) {
+        const cursor = world?.cursor;
+        if (
+          cursor?.active &&
+          Number.isFinite(cursor.x) &&
+          Number.isFinite(cursor.y)
+        ) {
+          const speed = Math.hypot(this.vx, this.vy) || 1;
+          const dx = cursor.x - this.x;
+          const dy = cursor.y - this.y;
+          const len = Math.hypot(dx, dy) || 1;
+          this.vx = (dx / len) * speed;
+          this.vy = (dy / len) * speed;
+        }
+      }
 
       const hit = grid.findCircleCollision(this.x, this.y, this.radius);
       if (hit) {

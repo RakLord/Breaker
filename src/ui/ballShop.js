@@ -187,7 +187,10 @@ export function updateBallShopCards(ctx) {
   const shouldReveal = (cost) => pointsNow.gte(cost.mul(revealThreshold));
 
   const countsByType = {};
-  for (const ball of ctx.game.balls) countsByType[ball.typeId] = (countsByType[ball.typeId] ?? 0) + 1;
+  for (const ball of ctx.game.balls) {
+    if (ball.data?.isCursorBall) continue;
+    countsByType[ball.typeId] = (countsByType[ball.typeId] ?? 0) + 1;
+  }
   const pieceUnlocked = ctx.getStarUpgradeOwned("pieceCount");
   const critUnlocked = ctx.getStarUpgradeOwned("criticalHits");
   const execUnlocked = ctx.getStarUpgradeOwned("execution");

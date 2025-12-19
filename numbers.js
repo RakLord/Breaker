@@ -14,8 +14,14 @@ export function format(d) {
 
 export function formatInt(d) {
     if (d === null || d === undefined) return "0";
-    if (typeof d === "number") return Math.round(d).toString();
-    if (typeof d === "string") return new Decimal(d).toFixed(0);
-    if (typeof d?.toFixed === "function") return d.toFixed(0);
-    return new Decimal(d).toFixed(0);
+    let dec;
+    try {
+        dec = d instanceof Decimal ? d : new Decimal(d);
+    } catch {
+        return "0";
+    }
+    const text = dec.toString();
+    if (text === "NaN" || text === "Infinity" || text === "-Infinity") return "0";
+    if (dec.abs().gte(1e6)) return dec.toExponential(2);
+    return dec.toFixed(0);
 }
