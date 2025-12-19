@@ -206,7 +206,7 @@ export function updateBallShopCards(ctx) {
     const spdMult = getBallSpeedMultiplier(player, typeId);
     const dmgCost = getBallDamageUpgradeCost(player, typeId);
     const spdCost = getBallSpeedUpgradeCost(player, typeId);
-    const cap = getBallCap(typeId);
+    const cap = getBallCap(player, typeId);
     const buyCost = getBallBuyCost(typeId, count);
 
     const unlocked = count > 0;

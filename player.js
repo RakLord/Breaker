@@ -85,6 +85,7 @@ export function createDefaultPlayer() {
       pieceCap: 0,
       criticalHits: false,
       execution: false,
+      normalCap: 0,
       clearsLogMult: false,
       damageMulti: false,
       persistence: false,
@@ -113,6 +114,10 @@ export function createDefaultPlayer() {
     },
     tutorials: {
       manualBallToastShown: false,
+    },
+    ui: {
+      ballContextEnabled: false,
+      showHpOverlay: false,
     },
     meta: {
       createdAt: Date.now(),
@@ -199,6 +204,7 @@ export function normalizePlayer(raw) {
     pieceCap: Math.max(0, Math.min(2, (rawStarUpgrades.pieceCap ?? 0) | 0)),
     criticalHits: !!rawStarUpgrades.criticalHits,
     execution: !!rawStarUpgrades.execution,
+    normalCap: Math.max(0, Math.min(2, (rawStarUpgrades.normalCap ?? 0) | 0)),
     clearsLogMult: !!rawStarUpgrades.clearsLogMult,
     damageMulti: !!rawStarUpgrades.damageMulti,
     persistence: !!rawStarUpgrades.persistence,
@@ -273,6 +279,12 @@ export function normalizePlayer(raw) {
     manualBallToastShown: !!rawTutorials.manualBallToastShown,
   };
 
+  const rawUi = raw.ui && typeof raw.ui === "object" ? raw.ui : {};
+  const ui = {
+    ballContextEnabled: !!rawUi.ballContextEnabled,
+    showHpOverlay: !!rawUi.showHpOverlay,
+  };
+
   return {
     version,
     points,
@@ -294,6 +306,7 @@ export function normalizePlayer(raw) {
     map: { pattern, seed },
     game: { balls, grid, initialBlocks },
     tutorials,
+    ui,
     meta: { createdAt, lastSavedAt },
   };
 }
@@ -409,8 +422,11 @@ export function ensureBallTypeState(player, typeId) {
   return s;
 }
 
-export function getBallCap(typeId) {
-  return BALL_SHOP_CONFIG[typeId]?.cap ?? 0;
+export function getBallCap(player, typeId) {
+  const baseCap = BALL_SHOP_CONFIG[typeId]?.cap ?? 0;
+  if (typeId !== "normal" || !player) return baseCap;
+  const bonus = Math.max(0, Math.min(2, (player.starUpgrades?.normalCap ?? 0) | 0));
+  return baseCap + bonus;
 }
 
 export function getBallBuyCost(typeId, ownedCount) {

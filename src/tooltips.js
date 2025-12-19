@@ -10,6 +10,7 @@ export const TOOLTIP_TEXT = {
   "star-critical": "Unlock critical hit upgrades for balls.",
   "star-execution": "Unlock execute upgrades to finish low HP bricks.",
   "star-prop-cap": "Increase the propagation upgrade cap.",
+  "star-normal-cap": "Increase the Normal ball cap by 1 (max +2).",
   "star-clears-log": "More clears based on bricks cleared.",
   "star-dmg-multi": "Double all ball damage.",
   "star-persist": "Keep normal ball upgrades after prestige.",

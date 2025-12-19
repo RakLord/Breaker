@@ -10,7 +10,7 @@
     <div id="app-shell">
       <header>
         <h1>Breaker</h1>
-        <div id="app-version">V0.2</div>
+        <div id="app-version">V0.2.2</div>
       </header>
 
       <main id="game-root">
@@ -27,9 +27,6 @@
             </div>
 
             <div class="hud-group">
-              <button id="ball-context-btn" type="button" data-tooltip-key="ball-focus">Ball Focus: Off</button>
-              <button id="hp-overlay-btn" type="button" data-tooltip-key="cell-hp">Cell HP: Off</button>
-              <button id="settings-btn" type="button">Settings</button>
               <div id="stats"></div>
             </div>
           </div>
@@ -38,6 +35,7 @@
             <div class="hud-group">
               <button id="clears-shop-btn" type="button">Clears</button>
               <button id="star-board-btn" type="button">Stars</button>
+              <button id="settings-btn" type="button">Settings</button>
             </div>
           </div>
 
@@ -185,6 +183,14 @@
                         <span class="btn-cost">(1)</span>
                       </button>
                     </div>
+                    <div class="stars-upgrade-row">
+                      <div class="stars-upgrade-level"><span id="star-normalcap-state">0/2</span></div>
+                      <button id="star-normalcap-buy" type="button" class="stars-upgrade-btn" data-tooltip-key="star-normal-cap">
+                        <span class="stars-icon" aria-hidden="true">N</span>
+                        <span class="btn-label">Normal Ball Cap</span>
+                        <span class="btn-cost">(1)</span>
+                      </button>
+                    </div>
                   </div>
                 </div>
 
@@ -307,6 +313,8 @@
               </div>
               <div class="modal-body settings-layout">
                 <div class="settings-actions">
+                  <button id="ball-context-btn" type="button" data-tooltip-key="ball-focus">Ball Focus: Off</button>
+                  <button id="hp-overlay-btn" type="button" data-tooltip-key="cell-hp">Cell HP: Off</button>
                   <button id="save-btn" type="button">Save</button>
                   <button id="load-btn" type="button">Load</button>
                   <button id="export-import-btn" type="button">Export / Import</button>

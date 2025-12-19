@@ -264,13 +264,25 @@ header h1 {
   display: flex;
   gap: 12px;
   align-items: center;
-  justify-content: center;
+  justify-content: space-between;
   padding: 10px 12px;
   border-bottom: 1px solid var(--border);
   background: var(--panel);
   backdrop-filter: blur(6px);
   flex-wrap: wrap;
   width: 100%;
+}
+
+#game-hud .hud-group {
+  flex: 1 1 auto;
+}
+
+#game-hud .hud-group:first-child {
+  justify-content: flex-start;
+}
+
+#game-hud .hud-group:last-child {
+  justify-content: flex-end;
 }
 
 #progress-hud {
@@ -328,6 +340,14 @@ button {
 }
 
 #star-board-btn.is-ready {
+  border-color: rgba(96, 165, 250, 0.55);
+  box-shadow:
+    0 0 16px rgba(96, 165, 250, 0.55),
+    0 8px 18px rgba(0, 0, 0, 0.45),
+    0 1px 0 rgba(255, 255, 255, 0.08) inset;
+}
+
+#clears-shop-btn.is-ready {
   border-color: rgba(96, 165, 250, 0.55);
   box-shadow:
     0 0 16px rgba(96, 165, 250, 0.55),

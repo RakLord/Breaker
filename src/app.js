@@ -87,6 +87,7 @@ export function startApp() {
     starPieceCapStateEl,
     starCritStateEl,
     starExecStateEl,
+    starNormalCapStateEl,
     starClearsLogStateEl,
     starDmgMultStateEl,
     starPersistStateEl,
@@ -97,6 +98,7 @@ export function startApp() {
     starPieceCapBuyBtn,
     starCritBuyBtn,
     starExecBuyBtn,
+    starNormalCapBuyBtn,
     starClearsLogBuyBtn,
     starDmgMultBuyBtn,
     starPersistBuyBtn,
@@ -161,6 +163,7 @@ export function startApp() {
   ensureCursorState(player);
   ensureGenerationSettings(player);
   ensureClearsUpgrades(player);
+  syncUiStateFromPlayer();
   window.player = player;
 
   const game = {
@@ -456,6 +459,9 @@ export function startApp() {
     ensureClearsUpgrades(player);
     ensureClearsStats();
     ensureStarsState();
+    syncUiStateFromPlayer();
+    updateBallContextButton();
+    updateHpOverlayButton();
     updateGridFromPlayer();
     window.player = player;
 
@@ -570,7 +576,7 @@ export function startApp() {
       (acc, b) => acc + (b.typeId === typeId && !b.data?.isCursorBall ? 1 : 0),
       0
     );
-    const cap = getBallCap(typeId);
+    const cap = getBallCap(player, typeId);
     if (!free && cap > 0 && ownedCount >= cap) {
       setMessage(`${typeId} cap reached (${cap})`);
       return false;
@@ -640,6 +646,9 @@ export function startApp() {
     ensureCursorState(player);
     ensureGenerationSettings(player);
     ensureClearsUpgrades(player);
+    syncUiStateFromPlayer();
+    updateBallContextButton();
+    updateHpOverlayButton();
     updateGridFromPlayer();
     window.player = player;
     game.balls = [];
@@ -717,6 +726,7 @@ export function startApp() {
         pieceCap: 0,
         criticalHits: false,
         execution: false,
+        normalCap: 0,
         clearsLogMult: false,
         damageMulti: false,
         persistence: false,
@@ -735,6 +745,7 @@ export function startApp() {
       player.starUpgrades[k] = !!player.starUpgrades[k];
     }
     player.starUpgrades.pieceCap = Math.max(0, Math.min(2, (player.starUpgrades.pieceCap ?? 0) | 0));
+    player.starUpgrades.normalCap = Math.max(0, Math.min(2, (player.starUpgrades.normalCap ?? 0) | 0));
 
     if (!player.starStats || typeof player.starStats !== "object") {
       player.starStats = {
@@ -772,6 +783,28 @@ export function startApp() {
     return player.tutorials;
   }
 
+  function ensureUiState() {
+    if (!player.ui || typeof player.ui !== "object") {
+      player.ui = { ballContextEnabled: false, showHpOverlay: false };
+    }
+    player.ui.ballContextEnabled = !!player.ui.ballContextEnabled;
+    player.ui.showHpOverlay = !!player.ui.showHpOverlay;
+    return player.ui;
+  }
+
+  function syncUiStateFromPlayer() {
+    const uiState = ensureUiState();
+    state.ballContextEnabled = !!uiState.ballContextEnabled;
+    state.showHpOverlay = !!uiState.showHpOverlay;
+    if (!state.ballContextEnabled) state.ballContextType = null;
+  }
+
+  function syncUiStateToPlayer() {
+    const uiState = ensureUiState();
+    uiState.ballContextEnabled = !!state.ballContextEnabled;
+    uiState.showHpOverlay = !!state.showHpOverlay;
+  }
+
   function canStarPrestige() {
     ensureProgress();
     return (player.progress?.level ?? 1) >= STAR_PRESTIGE_LEVEL;
@@ -793,6 +826,7 @@ export function startApp() {
     const keepStarUpgrades = { ...(player.starUpgrades ?? {}) };
     const keepStarStats = { ...(player.starStats ?? {}) };
     const keepManualBallToastShown = !!player.tutorials?.manualBallToastShown;
+    const keepUiState = player.ui && typeof player.ui === "object" ? { ...player.ui } : null;
     keepStarStats.prestiges = Math.max(0, (keepStarStats.prestiges ?? 0) | 0) + 1;
     keepStarStats.earnedTotal = Math.max(0, (keepStarStats.earnedTotal ?? 0) | 0) + 1;
     keepStarStats.lastPrestigeLevel = player.progress?.level ?? null;
@@ -802,6 +836,10 @@ export function startApp() {
     player.starUpgrades = keepStarUpgrades;
     player.starStats = keepStarStats;
     ensureTutorialState().manualBallToastShown = keepManualBallToastShown;
+    if (keepUiState) player.ui = keepUiState;
+    syncUiStateFromPlayer();
+    updateBallContextButton();
+    updateHpOverlayButton();
 
     ensureCursorState(player).level = 0;
     ensureGenerationSettings(player);
@@ -1016,10 +1054,12 @@ export function startApp() {
   ballContextBtn?.addEventListener("click", () => {
     state.ballContextEnabled = !state.ballContextEnabled;
     if (!state.ballContextEnabled) state.ballContextType = null;
+    syncUiStateToPlayer();
     updateBallContextButton();
   });
   hpOverlayBtn?.addEventListener("click", () => {
     state.showHpOverlay = !state.showHpOverlay;
+    syncUiStateToPlayer();
     updateHpOverlayButton();
   });
   clearsModalCloseBtn?.addEventListener("click", closeClearsModal);
@@ -1070,8 +1110,19 @@ export function startApp() {
     if (buyStarUpgrade("execution", 1)) setMessage("Unlocked Execution upgrades");
     else setMessage("Need 1 Star");
   });
-  const anyTier1Bought = () =>
-    getStarUpgradeOwned("pieceCount") || getStarUpgradeOwned("criticalHits") || getStarUpgradeOwned("execution");
+  starNormalCapBuyBtn?.addEventListener("click", () => {
+    if (buyStarUpgradeLevel("normalCap", 1, 2)) setMessage("Normal ball cap increased");
+    else setMessage("Need 1 Star (or maxed)");
+  });
+  const anyTier1Bought = () => {
+    ensureStarsState();
+    return (
+      getStarUpgradeOwned("pieceCount") ||
+      getStarUpgradeOwned("criticalHits") ||
+      getStarUpgradeOwned("execution") ||
+      (player.starUpgrades?.normalCap ?? 0) > 0
+    );
+  };
   const anyTier2Bought = () => {
     ensureStarsState();
     const pieceCap = Math.max(0, (player.starUpgrades?.pieceCap ?? 0) | 0);
@@ -1137,6 +1188,7 @@ export function startApp() {
     if (isTyping) return;
     if (e.code === "KeyH") {
       state.showHpOverlay = !state.showHpOverlay;
+      syncUiStateToPlayer();
       updateHpOverlayButton();
       e.preventDefault();
       return;
@@ -1144,6 +1196,7 @@ export function startApp() {
     if (e.code === "KeyF") {
       state.ballContextEnabled = !state.ballContextEnabled;
       if (!state.ballContextEnabled) state.ballContextType = null;
+      syncUiStateToPlayer();
       updateBallContextButton();
       e.preventDefault();
       return;
@@ -1305,8 +1358,11 @@ export function startApp() {
 
     const clearsNow = getClears(player);
     if (clearsShopBtn) {
+      ensureClearsStats();
       const buffered = Math.max(0, (player.clearsBuffered ?? 0) | 0);
       clearsShopBtn.textContent = buffered > 0 ? `Clears (${formatInt(clearsNow)} +${buffered})` : `Clears (${formatInt(clearsNow)})`;
+      const bestGain = Math.max(0, (player.clearsStats?.bestGain ?? 0) | 0);
+      clearsShopBtn.classList.toggle("is-ready", buffered > bestGain);
     }
     if (clearsShopBalanceEl) {
       const buffered = Math.max(0, (player.clearsBuffered ?? 0) | 0);
@@ -1354,16 +1410,17 @@ export function startApp() {
 
     if (statsEl) {
       const msg = performance.now() < state.uiMessageUntil ? ` | ${state.uiMessage}` : "";
-      const level = player.progress?.level ?? 1;
-      const stars = Math.max(0, (player.stars ?? 0) | 0);
-      statsEl.textContent = `Balls: ${game.balls.length} | Blocks: ${aliveBlocks} | Level: ${level} | Stars: ${stars} | FPS: ${fpsSmoothed.toFixed(0)}${msg}`;
+      statsEl.textContent = `Blocks: ${aliveBlocks} | Balls: ${game.balls.length} | FPS: ${fpsSmoothed.toFixed(0)}${msg}`;
     }
 
     if (hudLevelEl) {
+      ensureStarsState();
       const level = player.progress?.level ?? 1;
       const clears = formatInt(getClears(player));
       const buffered = Math.max(0, (player.clearsBuffered ?? 0) | 0);
-      hudLevelEl.textContent = `Level ${level} | Bricks ${aliveBlocks}/${state.initialBlocks} | Clears ${clears} (+${buffered})`;
+      const stars = Math.max(0, (player.stars ?? 0) | 0);
+      const clearsLabel = buffered > 0 ? `${clears} (+${buffered})` : clears;
+      hudLevelEl.textContent = `Level ${level} | Clears ${clearsLabel} | Stars ${stars}`;
     }
 
     if (starResetProgressTrack || starResetProgressFill || starResetProgressText) {
@@ -1458,6 +1515,11 @@ export function startApp() {
     }
     setStarOwned(starCritStateEl, getStarUpgradeOwned("criticalHits"));
     setStarOwned(starExecStateEl, getStarUpgradeOwned("execution"));
+    if (starNormalCapStateEl) {
+      ensureStarsState();
+      const lv = Math.max(0, (player.starUpgrades?.normalCap ?? 0) | 0);
+      starNormalCapStateEl.textContent = `${Math.min(2, lv)}/2`;
+    }
     setStarOwned(starClearsLogStateEl, getStarUpgradeOwned("clearsLogMult"));
     setStarOwned(starDmgMultStateEl, getStarUpgradeOwned("damageMulti"));
     setStarOwned(starPersistStateEl, getStarUpgradeOwned("persistence"));
@@ -1467,6 +1529,11 @@ export function startApp() {
     if (starPieceBuyBtn) starPieceBuyBtn.disabled = getStarUpgradeOwned("pieceCount") || starsNow < 1;
     if (starCritBuyBtn) starCritBuyBtn.disabled = getStarUpgradeOwned("criticalHits") || starsNow < 1;
     if (starExecBuyBtn) starExecBuyBtn.disabled = getStarUpgradeOwned("execution") || starsNow < 1;
+    if (starNormalCapBuyBtn) {
+      ensureStarsState();
+      const lv = Math.max(0, (player.starUpgrades?.normalCap ?? 0) | 0);
+      starNormalCapBuyBtn.disabled = lv >= 2 || starsNow < 1;
+    }
 
     const tier2Locked = !anyTier1Bought();
     if (starTier2Box) starTier2Box.classList.toggle("hidden", tier2Locked);
