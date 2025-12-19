@@ -449,7 +449,7 @@ export function getSplashRangeUpgradeCost(player) {
 }
 
 export function getSplashRangeCap() {
-  return 4;
+  return 3;
 }
 
 export function getBallPieceCountUpgradeCost(player, typeId) {

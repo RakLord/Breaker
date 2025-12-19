@@ -27,13 +27,17 @@
             </div>
 
             <div class="hud-group">
-              <button id="save-btn" type="button">Save</button>
-              <button id="load-btn" type="button">Load</button>
-              <button id="hard-reset-btn" type="button">Hard Reset</button>
+              <button id="ball-context-btn" type="button">Ball Focus: Off</button>
+              <button id="hp-overlay-btn" type="button">Cell HP: Off</button>
+              <button id="settings-btn" type="button">Settings</button>
+              <div id="stats"></div>
+            </div>
+          </div>
+
+          <div id="progress-hud">
+            <div class="hud-group">
               <button id="clears-shop-btn" type="button">Clears</button>
               <button id="star-board-btn" type="button">Stars</button>
-              <button id="export-import-btn" type="button">Export / Import</button>
-              <div id="stats"></div>
             </div>
           </div>
 
@@ -160,8 +164,8 @@
                     <div class="stars-upgrade-row">
                       <div class="stars-upgrade-level"><span id="star-piece-state">-</span></div>
                       <button id="star-piece-buy" type="button" class="stars-upgrade-btn">
-                        <span class="stars-icon" aria-hidden="true">🧩</span>
-                        <span class="btn-label">Unlock Piece Count</span>
+                        <span class="stars-icon" aria-hidden="true">🏹</span>
+                        <span class="btn-label">Unlock Propagation</span>
                         <span class="btn-cost">(1)</span>
                       </button>
                     </div>
@@ -192,7 +196,7 @@
                       <div class="stars-upgrade-level"><span id="star-piececap-state">0/2</span></div>
                       <button id="star-piececap-buy" type="button" class="stars-upgrade-btn">
                         <span class="stars-icon" aria-hidden="true">➕</span>
-                        <span class="btn-label">+1 Piece Cap</span>
+                        <span class="btn-label">+1 Propagation Cap</span>
                         <span class="btn-cost">(3)</span>
                       </button>
                     </div>
@@ -289,6 +293,24 @@
                       <div class="stars-action-desc">Spend Stars to permanently unlock mechanics.</div>
                     </div>
                   </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div id="settings-modal" class="modal hidden" aria-hidden="true">
+            <div class="modal-backdrop" data-action="close"></div>
+            <div class="modal-panel" role="dialog" aria-modal="true" aria-labelledby="settings-title">
+              <div class="modal-header">
+                <div id="settings-title" class="modal-title">Settings</div>
+                <button id="settings-close" type="button" class="modal-close" aria-label="Close">X</button>
+              </div>
+              <div class="modal-body settings-layout">
+                <div class="settings-actions">
+                  <button id="save-btn" type="button">Save</button>
+                  <button id="load-btn" type="button">Load</button>
+                  <button id="export-import-btn" type="button">Export / Import</button>
+                  <button id="hard-reset-btn" type="button">Hard Reset</button>
                 </div>
               </div>
             </div>

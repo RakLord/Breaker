@@ -61,7 +61,7 @@ export function ensureBallCard(ctx, typeId) {
           ${rangeRow}
           <div class="upgrade-row hidden" data-upgrade="piece">
             <div class="upgrade-level">Lv <span data-role="pc-lvl">1</span></div>
-            <button type="button" data-action="pc-up"><span class="btn-label">+1 Piece</span> <span class="btn-cost" data-role="pc-cost">(0)</span></button>
+            <button type="button" data-action="pc-up"><span class="btn-label">+1 Propagation</span> <span class="btn-cost" data-role="pc-cost">(0)</span></button>
           </div>
           <div class="upgrade-row hidden" data-upgrade="crit">
             <div class="upgrade-level">Lv <span data-role="crit-lvl">1</span></div>
@@ -76,7 +76,7 @@ export function ensureBallCard(ctx, typeId) {
         <div class="ball-stats">
           <div>Damage: <span data-role="damage">0</span></div>
           <div>Speed: <span data-role="speed">x1.00</span></div>
-          <div class="hidden" data-role="pieces-row">Pieces: <span data-role="pieces">1</span></div>
+          <div class="hidden" data-role="pieces-row">Propagation: <span data-role="pieces">1</span></div>
           <div class="hidden" data-role="crit-row">Crit: <span data-role="crit">0%</span></div>
           <div class="hidden" data-role="exec-row">Execute: <span data-role="exec">0%</span></div>
         </div>
@@ -128,14 +128,14 @@ export function initBallShopUI(ctx) {
       ctx.setMessage("Splash range upgraded");
     }
     if (action === "pc-up") {
-      if (!ctx.getStarUpgradeOwned("pieceCount")) return ctx.setMessage("Unlock Piece Count in Star Board");
+      if (!ctx.getStarUpgradeOwned("pieceCount")) return ctx.setMessage("Unlock Propagation in Star Board");
       const cap = ctx.getPieceUpgradeCapLevel();
       const state = ensureBallTypeState(player, typeId);
-      if (state.pieceLevel >= cap) return ctx.setMessage(`Piece cap reached (Lv ${cap})`);
+      if (state.pieceLevel >= cap) return ctx.setMessage(`Propagation cap reached (Lv ${cap})`);
       const cost = getBallPieceCountUpgradeCost(player, typeId);
       if (!trySpendPoints(player, cost)) return ctx.setMessage(`Need ${formatInt(cost)}`);
       state.pieceLevel += 1;
-      ctx.setMessage(`${typeId} piece count upgraded`);
+      ctx.setMessage(`${typeId} propagation upgraded`);
       return;
     }
     if (action === "crit-up") {
@@ -153,6 +153,25 @@ export function initBallShopUI(ctx) {
       ensureBallTypeState(player, typeId).executionLevel += 1;
       ctx.setMessage(`${typeId} execution upgraded`);
     }
+  });
+
+  ctx.dom.ballListEl.addEventListener("pointerover", (e) => {
+    if (!ctx.isBallContextEnabled()) return;
+    const card = e.target.closest(".ball-card");
+    if (!card) return;
+    const typeId = card.dataset.type;
+    if (typeId) ctx.setBallContextType(typeId);
+  });
+  ctx.dom.ballListEl.addEventListener("pointerout", (e) => {
+    if (!ctx.isBallContextEnabled()) return;
+    const card = e.target.closest(".ball-card");
+    if (!card) return;
+    if (e.relatedTarget && card.contains(e.relatedTarget)) return;
+    ctx.setBallContextType(null);
+  });
+  ctx.dom.ballListEl.addEventListener("pointerleave", () => {
+    if (!ctx.isBallContextEnabled()) return;
+    ctx.setBallContextType(null);
   });
 
   for (const typeId of Object.keys(BALL_TYPES)) ensureBallCard(ctx, typeId);

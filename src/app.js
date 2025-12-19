@@ -52,6 +52,9 @@ export function startApp() {
     hardResetBtn,
     clearsShopBtn,
     starBoardBtn,
+    settingsBtn,
+    ballContextBtn,
+    hpOverlayBtn,
     hudLevelEl,
     cursorUpgradeBtn,
     statsEl,
@@ -111,6 +114,8 @@ export function startApp() {
     exportImportBtn,
     exportImportModal,
     exportImportCloseBtn,
+    settingsModal,
+    settingsCloseBtn,
     exportSaveText,
     importSaveText,
     exportSaveCopyBtn,
@@ -141,6 +146,8 @@ export function startApp() {
     uiMessageUntil: 0,
     initialBlocks: 0,
     showHpOverlay: false,
+    ballContextEnabled: false,
+    ballContextType: null,
   };
 
   let player = loadPlayerFromStorage() ?? createDefaultPlayer();
@@ -253,6 +260,25 @@ export function startApp() {
   function setMessage(msg, seconds = 1.6) {
     state.uiMessage = msg;
     state.uiMessageUntil = performance.now() + seconds * 1000;
+  }
+
+  function updateBallContextButton() {
+    if (!ballContextBtn) return;
+    ballContextBtn.textContent = state.ballContextEnabled ? "Ball Focus: On" : "Ball Focus: Off";
+  }
+
+  function updateHpOverlayButton() {
+    if (!hpOverlayBtn) return;
+    hpOverlayBtn.textContent = state.showHpOverlay ? "Cell HP: On" : "Cell HP: Off";
+    hpOverlayBtn.classList.toggle("is-active", state.showHpOverlay);
+  }
+
+  function setBallContextType(typeId) {
+    state.ballContextType = typeId ?? null;
+  }
+
+  function isBallContextEnabled() {
+    return state.ballContextEnabled;
   }
 
   function applyLoadedPlayer(rawPlayer) {
@@ -654,10 +680,22 @@ export function startApp() {
     starsModal.setAttribute("aria-hidden", "false");
   }
 
+  function openSettingsModal() {
+    if (!settingsModal) return;
+    settingsModal.classList.remove("hidden");
+    settingsModal.setAttribute("aria-hidden", "false");
+  }
+
   function closeStarsModal() {
     if (!starsModal) return;
     starsModal.classList.add("hidden");
     starsModal.setAttribute("aria-hidden", "true");
+  }
+
+  function closeSettingsModal() {
+    if (!settingsModal) return;
+    settingsModal.classList.add("hidden");
+    settingsModal.setAttribute("aria-hidden", "true");
   }
 
   function openExportImportModal() {
@@ -748,14 +786,29 @@ export function startApp() {
     getPieceCountForLevel,
     getCritChanceForLevel,
     getExecuteRatioForLevel,
+    setBallContextType,
+    isBallContextEnabled,
   };
 
   saveBtn?.addEventListener("click", savePlayerNow);
   loadBtn?.addEventListener("click", loadPlayerNow);
   hardResetBtn?.addEventListener("click", hardResetNow);
-  exportImportBtn?.addEventListener("click", openExportImportModal);
+  exportImportBtn?.addEventListener("click", () => {
+    closeSettingsModal();
+    openExportImportModal();
+  });
   clearsShopBtn?.addEventListener("click", openClearsModal);
   starBoardBtn?.addEventListener("click", openStarsModal);
+  settingsBtn?.addEventListener("click", openSettingsModal);
+  ballContextBtn?.addEventListener("click", () => {
+    state.ballContextEnabled = !state.ballContextEnabled;
+    if (!state.ballContextEnabled) state.ballContextType = null;
+    updateBallContextButton();
+  });
+  hpOverlayBtn?.addEventListener("click", () => {
+    state.showHpOverlay = !state.showHpOverlay;
+    updateHpOverlayButton();
+  });
   clearsModalCloseBtn?.addEventListener("click", closeClearsModal);
   clearsModal?.addEventListener("click", (e) => {
     const target = e.target;
@@ -778,6 +831,11 @@ export function startApp() {
     const target = e.target;
     if (target?.dataset?.action === "close") closeStarsModal();
   });
+  settingsCloseBtn?.addEventListener("click", closeSettingsModal);
+  settingsModal?.addEventListener("click", (e) => {
+    const target = e.target;
+    if (target?.dataset?.action === "close") closeSettingsModal();
+  });
   starsPrestigeBtn?.addEventListener("click", () => {
     const did = starPrestigeNow();
     if (did) closeStarsModal();
@@ -788,7 +846,7 @@ export function startApp() {
   });
 
   starPieceBuyBtn?.addEventListener("click", () => {
-    if (buyStarUpgrade("pieceCount", 1)) setMessage("Unlocked Piece Count upgrades");
+    if (buyStarUpgrade("pieceCount", 1)) setMessage("Unlocked Propagation upgrades");
     else setMessage("Need 1 Star");
   });
   starCritBuyBtn?.addEventListener("click", () => {
@@ -813,8 +871,8 @@ export function startApp() {
   };
   starPieceCapBuyBtn?.addEventListener("click", () => {
     if (!anyTier1Bought()) return setMessage("Buy a Tier 1 upgrade first");
-    if (!getStarUpgradeOwned("pieceCount")) return setMessage("Unlock Piece Count first");
-    if (buyStarUpgradeLevel("pieceCap", 3, 2)) setMessage("Piece cap increased");
+    if (!getStarUpgradeOwned("pieceCount")) return setMessage("Unlock Propagation first");
+    if (buyStarUpgradeLevel("pieceCap", 3, 2)) setMessage("Propagation cap increased");
     else setMessage("Need 3 Stars (or maxed)");
   });
   starClearsLogBuyBtn?.addEventListener("click", () => {
@@ -867,8 +925,9 @@ export function startApp() {
     if (ok) closeExportImportModal();
   });
   window.addEventListener("keydown", (e) => {
-    if (e.code === "Space") {
-      state.showHpOverlay = true;
+    if (e.code === "KeyH") {
+      state.showHpOverlay = !state.showHpOverlay;
+      updateHpOverlayButton();
       e.preventDefault();
       return;
     }
@@ -877,15 +936,8 @@ export function startApp() {
     closeStarBoard();
     closeClearsModal();
     closeStarsModal();
+    closeSettingsModal();
     closeExportImportModal();
-  });
-  window.addEventListener("keyup", (e) => {
-    if (e.code !== "Space") return;
-    state.showHpOverlay = false;
-    e.preventDefault();
-  });
-  window.addEventListener("blur", () => {
-    state.showHpOverlay = false;
   });
   clearsDensityBuyBtn?.addEventListener("click", () => {
     ensureClearsUpgrades(player);
@@ -948,6 +1000,8 @@ export function startApp() {
   window.addEventListener("resize", () => updateCanvasView(canvas, world, view));
   updateCanvasView(canvas, world, view);
   initBallShopUI(ballShopCtx);
+  updateBallContextButton();
+  updateHpOverlayButton();
 
   ensureProgress();
   updateGridFromPlayer();
@@ -1002,7 +1056,12 @@ export function startApp() {
     ctx.strokeRect(0.5, 0.5, world.width - 1, world.height - 1);
 
     grid.draw(ctx, { showHp: state.showHpOverlay });
-    for (const ball of game.balls) ball.draw(ctx);
+    const showOnlyType = state.ballContextEnabled ? state.ballContextType : null;
+    if (showOnlyType) {
+      for (const ball of game.balls) if (ball.typeId === showOnlyType) ball.draw(ctx);
+    } else {
+      for (const ball of game.balls) ball.draw(ctx);
+    }
 
     if (pointsEl) {
       pointsEl.innerHTML = `<span class="points-label">Points</span><span class="points-value">${formatInt(
@@ -1083,10 +1142,11 @@ export function startApp() {
     }
 
     if (starBoardBtn) {
+      ensureStarsState();
       const stars = Math.max(0, (player.stars ?? 0) | 0);
       starBoardBtn.textContent = `Stars (${stars})`;
-      const level = player.progress?.level ?? 1;
-      starBoardBtn.classList.toggle("hidden", level <= 10);
+      const starPrestiges = Math.max(0, (player.starStats?.prestiges ?? 0) | 0);
+      starBoardBtn.classList.toggle("hidden", stars < 1 && starPrestiges < 1);
     }
     if (starBoardBalanceEl) {
       const stars = Math.max(0, (player.stars ?? 0) | 0);
