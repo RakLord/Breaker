@@ -314,13 +314,22 @@ export class BlockGrid {
     return best;
   }
 
-  draw(ctx, { showEmpty = false } = {}) {
+  draw(ctx, { showEmpty = false, showHp = false } = {}) {
     const cell = this.cellSize;
     const ox = this.originX;
     const oy = this.originY;
 
+    const showHpText = showHp && cell >= 14;
+    const fontSize = showHpText ? Math.max(8, Math.floor(cell * 0.42)) : 0;
+    const textColor = "rgba(248,250,252,0.9)";
+
     ctx.save();
     ctx.translate(ox, oy);
+    if (showHpText) {
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+      ctx.font = `${fontSize}px sans-serif`;
+    }
 
     for (let row = 0; row < this.rows; row++) {
       for (let col = 0; col < this.cols; col++) {
@@ -340,6 +349,13 @@ export class BlockGrid {
         const light = 48 + t * 10;
         ctx.fillStyle = `hsl(${hue} 75% ${light}%)`;
         ctx.fillRect(col * cell + 1, row * cell + 1, cell - 2, cell - 2);
+        if (showHpText) {
+          const label = Math.round(hp).toString();
+          const x = col * cell + cell * 0.5;
+          const y = row * cell + cell * 0.5;
+          ctx.fillStyle = textColor;
+          ctx.fillText(label, x, y);
+        }
       }
     }
 

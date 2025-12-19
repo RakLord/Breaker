@@ -1,13 +1,38 @@
-import { D } from "./numbers.js";
+import { D, Decimal } from "./numbers.js";
 
 const SAVE_KEY = "breaker_player_save_v1";
 const SAVE_VERSION = 1;
+export const MAX_SAVED_BALLS = 200;
+
+function coerceDecimalString(value, fallback = "0") {
+  if (value === null || value === undefined) return fallback;
+  if (typeof value === "number") {
+    if (!Number.isFinite(value)) return fallback;
+    return String(value);
+  }
+  if (typeof value !== "string") {
+    if (value && typeof value.toString === "function") {
+      return coerceDecimalString(value.toString(), fallback);
+    }
+    return fallback;
+  }
+  const trimmed = value.trim();
+  if (!trimmed) return fallback;
+  try {
+    const parsed = new Decimal(trimmed);
+    const text = parsed.toString();
+    if (text === "NaN" || text === "Infinity" || text === "-Infinity") return fallback;
+    return trimmed;
+  } catch {
+    return fallback;
+  }
+}
 
 export const BALL_SHOP_CONFIG = {
-  normal: { cap: 10, baseCost: D(50), costGrowth: D(1.18) },
-  splash: { cap: 5, baseCost: D(200), costGrowth: D(1.22) },
-  sniper: { cap: 5, baseCost: D(2500), costGrowth: D(1.25) },
-  sweeper: { cap: 5, baseCost: D(10000), costGrowth: D(1.24) },
+  normal: { cap: 3, baseCost: D(50), costGrowth: D(1.18) },
+  splash: { cap: 3, baseCost: D(200), costGrowth: D(1.22) },
+  sniper: { cap: 3, baseCost: D(12500), costGrowth: D(1.25) },
+  sweeper: { cap: 2, baseCost: D(200000), costGrowth: D(1.24) },
 };
 
 export const CLEARS_SHOP_CONFIG = {
@@ -137,8 +162,8 @@ export function normalizePlayer(raw) {
   if (!raw || typeof raw !== "object") return base;
 
   const version = Number.isFinite(raw.version) ? raw.version : SAVE_VERSION;
-  const points = typeof raw.points === "string" || typeof raw.points === "number" ? String(raw.points) : "0";
-  const clears = typeof raw.clears === "string" || typeof raw.clears === "number" ? String(raw.clears) : "0";
+  const points = coerceDecimalString(raw.points);
+  const clears = coerceDecimalString(raw.clears);
   const stars =
     typeof raw.stars === "string" || typeof raw.stars === "number" ? Math.max(0, Number.parseInt(raw.stars, 10) || 0) : 0;
   const clearsBuffered = Math.max(0, (raw.clearsBuffered ?? 0) | 0);
@@ -230,7 +255,9 @@ export function normalizePlayer(raw) {
         : ((Math.random() * 2 ** 32) >>> 0);
 
   const game = raw.game && typeof raw.game === "object" ? raw.game : {};
-  const balls = Array.isArray(game.balls) ? game.balls : [];
+  const balls = Array.isArray(game.balls)
+    ? game.balls.filter((ball) => ball && typeof ball === "object").slice(0, MAX_SAVED_BALLS)
+    : [];
   const grid = normalizeGameGrid(game.grid);
   const initialBlocks = Math.max(0, (game.initialBlocks ?? 0) | 0);
 
@@ -453,18 +480,35 @@ export function getBallSpeedMultiplier(player, typeId) {
   return 1 + 0.24 * level;
 }
 
+export function getBallDamagePerLevel(baseDamage) {
+  const base = Number.isFinite(baseDamage) ? baseDamage : 0;
+  return Math.max(1, base * 0.25);
+}
+
+export function getBallDamageValue(player, typeId, baseDamage) {
+  const level = ensureBallTypeState(player, typeId).damageLevel;
+  const base = Number.isFinite(baseDamage) ? baseDamage : 0;
+  const perLevel = getBallDamagePerLevel(base);
+  return base + perLevel * level;
+}
+
 export function savePlayerToStorage(player) {
   const now = Date.now();
   const serializable = normalizePlayer(player);
   serializable.meta.lastSavedAt = now;
-  localStorage.setItem(SAVE_KEY, JSON.stringify(serializable));
-  return serializable;
+  let ok = true;
+  try {
+    localStorage.setItem(SAVE_KEY, JSON.stringify(serializable));
+  } catch {
+    ok = false;
+  }
+  return { player: serializable, ok };
 }
 
 export function loadPlayerFromStorage() {
-  const raw = localStorage.getItem(SAVE_KEY);
-  if (!raw) return null;
   try {
+    const raw = localStorage.getItem(SAVE_KEY);
+    if (!raw) return null;
     const parsed = JSON.parse(raw);
     return normalizePlayer(parsed);
   } catch {
@@ -473,7 +517,11 @@ export function loadPlayerFromStorage() {
 }
 
 export function clearPlayerSaveFromStorage() {
-  localStorage.removeItem(SAVE_KEY);
+  try {
+    localStorage.removeItem(SAVE_KEY);
+  } catch {
+    // Ignore storage errors (private mode or quota issues).
+  }
 }
 
 export function ensureGenerationSettings(player) {
