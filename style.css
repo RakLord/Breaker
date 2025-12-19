@@ -794,6 +794,19 @@ button.glow-white:not(:disabled):hover {
   filter: drop-shadow(0 0 6px rgba(108, 163, 255, 0.7));
 }
 
+.tippy-box[data-theme~="breaker"] {
+  background: rgba(15, 23, 42, 0.95);
+  color: rgba(226, 232, 240, 0.95);
+  border: 1px solid rgba(148, 163, 184, 0.35);
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.45);
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+.tippy-box[data-theme~="breaker"] .tippy-arrow {
+  color: rgba(15, 23, 42, 0.95);
+}
+
 .export-import-layout {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));

@@ -18,6 +18,7 @@ import {
   trySpendPoints,
 } from "../../player.js";
 import { clamp } from "../game/math.js";
+import { initTooltips } from "../tooltips.js";
 
 export function ensureBallCard(ctx, typeId) {
   if (!ctx.dom.ballListEl) return null;
@@ -35,7 +36,7 @@ export function ensureBallCard(ctx, typeId) {
       ? `
         <div class="upgrade-row">
           <div class="upgrade-level">Lv <span data-role="rng-lvl">1</span></div>
-          <button type="button" data-action="rng-up"><span class="btn-label">+1 Range</span> <span class="btn-cost" data-role="rng-cost">(0)</span></button>
+          <button type="button" data-action="rng-up" data-tooltip-key="ball-range"><span class="btn-label">+1 Range</span> <span class="btn-cost" data-role="rng-cost">(0)</span></button>
         </div>
       `
       : "";
@@ -52,24 +53,24 @@ export function ensureBallCard(ctx, typeId) {
         <div class="ball-actions">
           <div class="upgrade-row">
             <div class="upgrade-level">Lv <span data-role="dmg-lvl">1</span></div>
-            <button type="button" data-action="dmg-up"><span class="btn-label">+1 Damage</span> <span class="btn-cost" data-role="dmg-cost">(0)</span></button>
+            <button type="button" data-action="dmg-up" data-tooltip-key="ball-damage"><span class="btn-label">+1 Damage</span> <span class="btn-cost" data-role="dmg-cost">(0)</span></button>
           </div>
           <div class="upgrade-row">
             <div class="upgrade-level">Lv <span data-role="spd-lvl">1</span></div>
-            <button type="button" data-action="spd-up"><span class="btn-label">+1 Speed</span> <span class="btn-cost" data-role="spd-cost">(0)</span></button>
+            <button type="button" data-action="spd-up" data-tooltip-key="ball-speed"><span class="btn-label">+1 Speed</span> <span class="btn-cost" data-role="spd-cost">(0)</span></button>
           </div>
           ${rangeRow}
           <div class="upgrade-row hidden" data-upgrade="piece">
             <div class="upgrade-level">Lv <span data-role="pc-lvl">1</span></div>
-            <button type="button" data-action="pc-up"><span class="btn-label">+1 Propagation</span> <span class="btn-cost" data-role="pc-cost">(0)</span></button>
+            <button type="button" data-action="pc-up" data-tooltip-key="ball-propagation"><span class="btn-label">+1 Propagation</span> <span class="btn-cost" data-role="pc-cost">(0)</span></button>
           </div>
           <div class="upgrade-row hidden" data-upgrade="crit">
             <div class="upgrade-level">Lv <span data-role="crit-lvl">1</span></div>
-            <button type="button" data-action="crit-up"><span class="btn-label">+1 Crit</span> <span class="btn-cost" data-role="crit-cost">(0)</span></button>
+            <button type="button" data-action="crit-up" data-tooltip-key="ball-crit"><span class="btn-label">+1 Crit</span> <span class="btn-cost" data-role="crit-cost">(0)</span></button>
           </div>
           <div class="upgrade-row hidden" data-upgrade="exec">
             <div class="upgrade-level">Lv <span data-role="exec-lvl">1</span></div>
-            <button type="button" data-action="exec-up"><span class="btn-label">+1 Execute</span> <span class="btn-cost" data-role="exec-cost">(0)</span></button>
+            <button type="button" data-action="exec-up" data-tooltip-key="ball-exec"><span class="btn-label">+1 Execute</span> <span class="btn-cost" data-role="exec-cost">(0)</span></button>
           </div>
         </div>
 
@@ -85,6 +86,7 @@ export function ensureBallCard(ctx, typeId) {
 
   ctx.dom.ballListEl.appendChild(card);
   ctx.ui.ballCards.set(type.id, card);
+  initTooltips(card);
   return card;
 }
 

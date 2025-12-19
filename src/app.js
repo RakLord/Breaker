@@ -40,6 +40,8 @@ import { buildPlayerSnapshot, encodeSaveString, decodeSaveString } from "./game/
 import { getPieceCountForLevel, getCritChanceForLevel, getExecuteRatioForLevel } from "./game/upgradeMath.js";
 import { getDomRefs } from "./ui/dom.js";
 import { initBallShopUI, updateBallShopCards } from "./ui/ballShop.js";
+import { initTooltips } from "./tooltips.js";
+import "tippy.js/dist/tippy.css";
 
 export function startApp() {
   const dom = getDomRefs();
@@ -925,9 +927,19 @@ export function startApp() {
     if (ok) closeExportImportModal();
   });
   window.addEventListener("keydown", (e) => {
+    const tagName = e.target?.tagName;
+    const isTyping = tagName === "INPUT" || tagName === "TEXTAREA" || e.target?.isContentEditable;
+    if (isTyping) return;
     if (e.code === "KeyH") {
       state.showHpOverlay = !state.showHpOverlay;
       updateHpOverlayButton();
+      e.preventDefault();
+      return;
+    }
+    if (e.code === "KeyF") {
+      state.ballContextEnabled = !state.ballContextEnabled;
+      if (!state.ballContextEnabled) state.ballContextType = null;
+      updateBallContextButton();
       e.preventDefault();
       return;
     }
@@ -1002,6 +1014,7 @@ export function startApp() {
   initBallShopUI(ballShopCtx);
   updateBallContextButton();
   updateHpOverlayButton();
+  initTooltips();
 
   ensureProgress();
   updateGridFromPlayer();

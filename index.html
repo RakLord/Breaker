@@ -17,7 +17,7 @@
         <section id="layer-nav">
           <div id="sidebar">
             <div id="points"></div>
-            <button id="cursor-upgrade-btn" type="button"></button>
+            <button id="cursor-upgrade-btn" type="button" data-tooltip-key="cursor-upgrade"></button>
             <div id="ball-list"></div>
           </div>
         </section>
@@ -28,8 +28,8 @@
             </div>
 
             <div class="hud-group">
-              <button id="ball-context-btn" type="button">Ball Focus: Off</button>
-              <button id="hp-overlay-btn" type="button">Cell HP: Off</button>
+              <button id="ball-context-btn" type="button" data-tooltip-key="ball-focus">Ball Focus: Off</button>
+              <button id="hp-overlay-btn" type="button" data-tooltip-key="cell-hp">Cell HP: Off</button>
               <button id="settings-btn" type="button">Settings</button>
               <div id="stats"></div>
             </div>
@@ -59,7 +59,7 @@
                   <div class="modal-upgrade-sub">Decreases the noise spawn threshold (more blocks). Capped at 90% filled.</div>
                   <div class="upgrade-row">
                     <div class="upgrade-level">Lv <span id="clears-density-lvl">1</span></div>
-                    <button id="clears-density-buy" type="button">
+                    <button id="clears-density-buy" type="button" data-tooltip-key="clears-density">
                       <span class="btn-label">Buy</span>
                       <span class="btn-cost" id="clears-density-cost">(0)</span>
                     </button>
@@ -71,7 +71,7 @@
                   <div class="modal-upgrade-sub">Decreases cell size to fit more cells per row/column.</div>
                   <div class="upgrade-row">
                     <div class="upgrade-level">Lv <span id="clears-grid-lvl">1</span></div>
-                    <button id="clears-grid-buy" type="button">
+                    <button id="clears-grid-buy" type="button" data-tooltip-key="clears-grid">
                       <span class="btn-label">Buy</span>
                       <span class="btn-cost" id="clears-grid-cost">(0)</span>
                     </button>
@@ -84,7 +84,7 @@
                   <div class="modal-upgrade-sub">Reduces starting brick HP by 1 per level (min 1).</div>
                   <div class="upgrade-row">
                     <div class="upgrade-level">Lv <span id="clears-hp-lvl">1</span></div>
-                    <button id="clears-hp-buy" type="button">
+                    <button id="clears-hp-buy" type="button" data-tooltip-key="clears-hp">
                       <span class="btn-label">Buy</span>
                       <span class="btn-cost" id="clears-hp-cost">(0)</span>
                     </button>
@@ -164,7 +164,7 @@
                   <div class="stars-upgrades">
                     <div class="stars-upgrade-row">
                       <div class="stars-upgrade-level"><span id="star-piece-state">-</span></div>
-                      <button id="star-piece-buy" type="button" class="stars-upgrade-btn">
+                      <button id="star-piece-buy" type="button" class="stars-upgrade-btn" data-tooltip-key="star-propagation">
                         <span class="stars-icon" aria-hidden="true">🏹</span>
                         <span class="btn-label">Unlock Propagation</span>
                         <span class="btn-cost">(1)</span>
@@ -172,7 +172,7 @@
                     </div>
                     <div class="stars-upgrade-row">
                       <div class="stars-upgrade-level"><span id="star-crit-state">-</span></div>
-                      <button id="star-crit-buy" type="button" class="stars-upgrade-btn">
+                      <button id="star-crit-buy" type="button" class="stars-upgrade-btn" data-tooltip-key="star-critical">
                         <span class="stars-icon" aria-hidden="true">🎯</span>
                         <span class="btn-label">Unlock Critical Hits</span>
                         <span class="btn-cost">(1)</span>
@@ -180,7 +180,7 @@
                     </div>
                     <div class="stars-upgrade-row">
                       <div class="stars-upgrade-level"><span id="star-exec-state">-</span></div>
-                      <button id="star-exec-buy" type="button" class="stars-upgrade-btn">
+                      <button id="star-exec-buy" type="button" class="stars-upgrade-btn" data-tooltip-key="star-execution">
                         <span class="stars-icon" aria-hidden="true">⚡</span>
                         <span class="btn-label">Unlock Execution</span>
                         <span class="btn-cost">(1)</span>
@@ -195,7 +195,7 @@
                   <div class="stars-upgrades">
                     <div class="stars-upgrade-row">
                       <div class="stars-upgrade-level"><span id="star-piececap-state">0/2</span></div>
-                      <button id="star-piececap-buy" type="button" class="stars-upgrade-btn">
+                      <button id="star-piececap-buy" type="button" class="stars-upgrade-btn" data-tooltip-key="star-prop-cap">
                         <span class="stars-icon" aria-hidden="true">➕</span>
                         <span class="btn-label">+1 Propagation Cap</span>
                         <span class="btn-cost">(3)</span>
@@ -203,7 +203,7 @@
                     </div>
                     <div class="stars-upgrade-row">
                       <div class="stars-upgrade-level"><span id="star-clearslog-state">-</span></div>
-                      <button id="star-clearslog-buy" type="button" class="stars-upgrade-btn">
+                      <button id="star-clearslog-buy" type="button" class="stars-upgrade-btn" data-tooltip-key="star-clears-log">
                         <span class="stars-icon" aria-hidden="true">📈</span>
                         <span class="btn-label">More Clears</span>
                         <span class="btn-cost">(3)</span>
@@ -211,7 +211,7 @@
                     </div>
                     <div class="stars-upgrade-row">
                       <div class="stars-upgrade-level"><span id="star-dmgmult-state">-</span></div>
-                      <button id="star-dmgmult-buy" type="button" class="stars-upgrade-btn">
+                      <button id="star-dmgmult-buy" type="button" class="stars-upgrade-btn" data-tooltip-key="star-dmg-multi">
                         <span class="stars-icon" aria-hidden="true">💥</span>
                         <span class="btn-label">Damage Multi</span>
                         <span class="btn-cost">(3)</span>
@@ -219,7 +219,7 @@
                     </div>
                     <div class="stars-upgrade-row">
                       <div class="stars-upgrade-level"><span id="star-persist-state">-</span></div>
-                      <button id="star-persist-buy" type="button" class="stars-upgrade-btn">
+                      <button id="star-persist-buy" type="button" class="stars-upgrade-btn" data-tooltip-key="star-persist">
                         <span class="stars-icon" aria-hidden="true">🔒</span>
                         <span class="btn-label">Persistance</span>
                         <span class="btn-cost">(3)</span>
@@ -234,7 +234,7 @@
                   <div class="stars-upgrades">
                     <div class="stars-upgrade-row">
                       <div class="stars-upgrade-level"><span id="star-advpersist-state">-</span></div>
-                      <button id="star-advpersist-buy" type="button" class="stars-upgrade-btn">
+                      <button id="star-advpersist-buy" type="button" class="stars-upgrade-btn" data-tooltip-key="star-adv-persist">
                         <span class="stars-icon" aria-hidden="true">🌟</span>
                         <span class="btn-label">Advanced Persistance</span>
                         <span class="btn-cost">(5)</span>

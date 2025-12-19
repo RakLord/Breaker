@@ -25,6 +25,8 @@
     "vite": "^7.3.0"
   },
   "dependencies": {
-    "break_infinity.js": "^2.2.0"
+    "@popperjs/core": "^2.11.8",
+    "break_infinity.js": "^2.2.0",
+    "tippy.js": "^6.3.7"
   }
 }
