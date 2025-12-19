@@ -32,7 +32,7 @@ export const BALL_SHOP_CONFIG = {
   normal: { cap: 3, baseCost: D(50), costGrowth: D(1.18) },
   splash: { cap: 3, baseCost: D(200), costGrowth: D(1.22) },
   sniper: { cap: 3, baseCost: D(1000), costGrowth: D(1.25) },
-  sweeper: { cap: 2, baseCost: D(50000), costGrowth: D(1.24) },
+  sweeper: { cap: 2, baseCost: D(25000), costGrowth: D(1.24) },
 };
 
 export const CLEARS_SHOP_CONFIG = {
@@ -497,7 +497,8 @@ export function getBallDamagePerLevel(baseDamage) {
 export function getBallDamageValue(player, typeId, baseDamage) {
   const level = ensureBallTypeState(player, typeId).damageLevel;
   const base = Number.isFinite(baseDamage) ? baseDamage : 0;
-  const perLevel = getBallDamagePerLevel(base);
+  let perLevel = getBallDamagePerLevel(base);
+  if (typeId === "sweeper") perLevel *= 2;
   return base + perLevel * level;
 }
 

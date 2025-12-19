@@ -110,6 +110,9 @@ export function startApp() {
     starsStatsLine2El,
     starsStatsLine3El,
     starsOpenBoardBtn,
+    starResetProgressTrack,
+    starResetProgressFill,
+    starResetProgressText,
     exportImportBtn,
     exportImportModal,
     exportImportCloseBtn,
@@ -121,6 +124,8 @@ export function startApp() {
     exportSaveCopyBtn,
     importSaveLoadBtn,
   } = dom;
+
+  const STAR_PRESTIGE_LEVEL = 40;
 
   if (!canvas) throw new Error("Missing #game-canvas");
   const ctx = canvas.getContext("2d");
@@ -396,9 +401,8 @@ export function startApp() {
       }
     }
 
-    ctx.strokeStyle = "rgba(248, 113, 113, 0.18)";
-    ctx.lineWidth = 1.6;
-    ctx.setLineDash([6, 12]);
+    ctx.strokeStyle = "rgba(230, 201, 201, 0.03)";
+    ctx.lineWidth = 5.0;
     ctx.stroke();
     ctx.restore();
   }
@@ -770,13 +774,13 @@ export function startApp() {
 
   function canStarPrestige() {
     ensureProgress();
-    return (player.progress?.level ?? 1) >= 35;
+    return (player.progress?.level ?? 1) >= STAR_PRESTIGE_LEVEL;
   }
 
   function starPrestigeNow() {
     ensureStarsState();
     if (!canStarPrestige()) {
-      setMessage("Need Level 35");
+      setMessage(`Need Level ${STAR_PRESTIGE_LEVEL}`);
       return false;
     }
 
@@ -1144,6 +1148,17 @@ export function startApp() {
       e.preventDefault();
       return;
     }
+    if (e.code === "KeyC") {
+      openClearsModal();
+      e.preventDefault();
+      return;
+    }
+    if (e.code === "KeyS") {
+      if (!starBoardBtn || starBoardBtn.classList.contains("hidden")) return;
+      openStarsModal();
+      e.preventDefault();
+      return;
+    }
     if (e.key !== "Escape") return;
     closeClearsShop();
     closeStarBoard();
@@ -1351,12 +1366,35 @@ export function startApp() {
       hudLevelEl.textContent = `Level ${level} | Bricks ${aliveBlocks}/${state.initialBlocks} | Clears ${clears} (+${buffered})`;
     }
 
+    if (starResetProgressTrack || starResetProgressFill || starResetProgressText) {
+      ensureProgress();
+      const level = Math.max(1, player.progress?.level ?? 1);
+      const progress = clamp(level / STAR_PRESTIGE_LEVEL, 0, 1);
+      const percent = Math.min(100, Math.round(progress * 100));
+      if (starResetProgressFill) starResetProgressFill.style.width = `${percent}%`;
+      if (starResetProgressFill) starResetProgressFill.classList.toggle("is-ready", level >= STAR_PRESTIGE_LEVEL);
+      if (starResetProgressTrack) starResetProgressTrack.classList.toggle("is-ready", level >= STAR_PRESTIGE_LEVEL);
+      if (starBoardBtn) starBoardBtn.classList.toggle("is-ready", level >= STAR_PRESTIGE_LEVEL);
+      if (starResetProgressText) {
+        starResetProgressText.textContent = `Lv ${level} / ${STAR_PRESTIGE_LEVEL} (${percent}%)`;
+      }
+      if (starResetProgressTrack) {
+        starResetProgressTrack.setAttribute("aria-valuenow", String(percent));
+        starResetProgressTrack.setAttribute(
+          "aria-valuetext",
+          `Level ${level} of ${STAR_PRESTIGE_LEVEL} (${percent}%)`
+        );
+      }
+    }
+
     if (starBoardBtn) {
       ensureStarsState();
       const stars = Math.max(0, (player.stars ?? 0) | 0);
       starBoardBtn.textContent = `Stars (${stars})`;
       const starPrestiges = Math.max(0, (player.starStats?.prestiges ?? 0) | 0);
-      starBoardBtn.classList.toggle("hidden", stars < 1 && starPrestiges < 1);
+      const level = player.progress?.level ?? 1;
+      const showStarsButton = stars > 0 || starPrestiges > 0 || level > 30;
+      starBoardBtn.classList.toggle("hidden", !showStarsButton);
     }
     if (starBoardBalanceEl) {
       const stars = Math.max(0, (player.stars ?? 0) | 0);
@@ -1399,7 +1437,7 @@ export function startApp() {
         starsBalanceEl.textContent = `Stars: ${stars} | Earned: ${earned} | Spent: ${spent}`;
       }
       if (starsPrestigeBtn) starsPrestigeBtn.disabled = !ok;
-      if (starsPrestigeReqEl) starsPrestigeReqEl.textContent = ok ? "Ready" : "Lv 20";
+      if (starsPrestigeReqEl) starsPrestigeReqEl.textContent = ok ? "Ready" : `Lv ${STAR_PRESTIGE_LEVEL}`;
       const prestiges = Math.max(0, (player.starStats?.prestiges ?? 0) | 0);
       const last = player.starStats?.lastPrestigeLevel;
       const earned = Math.max(0, (player.starStats?.earnedTotal ?? 0) | 0);

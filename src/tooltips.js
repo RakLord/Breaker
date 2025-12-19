@@ -22,14 +22,31 @@ export const TOOLTIP_TEXT = {
   "ball-exec": "Increase execute threshold on low HP bricks.",
 };
 
+function ensureTooltipTarget(el, key) {
+  if (!el || !key) return null;
+  if (el.tagName === "BUTTON") {
+    const parent = el.parentElement;
+    if (parent?.classList?.contains("tooltip-wrap")) return parent;
+    const wrapper = document.createElement("span");
+    wrapper.className = "tooltip-wrap";
+    wrapper.dataset.tooltipKey = key;
+    el.removeAttribute("data-tooltip-key");
+    parent?.insertBefore(wrapper, el);
+    wrapper.appendChild(el);
+    return wrapper;
+  }
+  return el;
+}
+
 export function initTooltips(root = document) {
   const nodes = root.querySelectorAll("[data-tooltip-key]");
   nodes.forEach((el) => {
-    if (el._tippy) return;
     const key = el.dataset.tooltipKey;
     const content = TOOLTIP_TEXT[key];
     if (!content) return;
-    tippy(el, {
+    const target = ensureTooltipTarget(el, key);
+    if (!target || target._tippy) return;
+    tippy(target, {
       content,
       theme: "breaker",
       delay: [250, 0],

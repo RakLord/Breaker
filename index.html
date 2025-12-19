@@ -196,7 +196,7 @@
                       <div class="stars-upgrade-level"><span id="star-piececap-state">0/2</span></div>
                       <button id="star-piececap-buy" type="button" class="stars-upgrade-btn" data-tooltip-key="star-prop-cap">
                         <span class="stars-icon" aria-hidden="true">➕</span>
-                        <span class="btn-label">+1 Propagation Cap</span>
+                        <span class="btn-label">Propagation Cap</span>
                         <span class="btn-cost">(3)</span>
                       </button>
                     </div>
@@ -279,8 +279,8 @@
                     <div class="stars-action">
                       <button id="stars-prestige-btn" type="button" class="stars-action-btn glow-white">
                         <span class="stars-icon" aria-hidden="true">✨</span>
-                        <span class="btn-label">Gain +1 Star (Reset)</span>
-                        <span class="btn-cost" id="stars-prestige-req">(Lv 20)</span>
+                        <span class="btn-label">Gain Star (Reset)</span>
+                        <span class="btn-cost" id="stars-prestige-req">(Lv 40)</span>
                       </button>
                       <div class="stars-action-desc">Reset points/clears/balls and lower upgrades to gain a Star.</div>
                     </div>
@@ -352,6 +352,25 @@
           </div>
         </section>
       </main>
+      <div id="star-reset-progress">
+        <div class="star-reset-progress-inner">
+          <div class="star-reset-progress-label">
+            <span class="star-reset-progress-title">Star Progress</span>
+            <span id="star-reset-progress-text">0%</span>
+          </div>
+          <div
+            id="star-reset-progress-track"
+            class="star-reset-progress-track"
+            role="progressbar"
+            aria-valuemin="0"
+            aria-valuemax="100"
+            aria-valuenow="0"
+            aria-valuetext="Level 0 of 40 (0%)"
+          >
+            <div id="star-reset-progress-fill" class="star-reset-progress-fill"></div>
+          </div>
+        </div>
+      </div>
       <div id="toast-container" aria-live="polite" aria-atomic="false"></div>
     </div>
     <script type="module" src="./main.js"></script>

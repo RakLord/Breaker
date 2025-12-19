@@ -60,6 +60,73 @@ body {
   max-width: 320px;
 }
 
+#star-reset-progress {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  padding: 10px 12px calc(12px + env(safe-area-inset-bottom));
+  background: linear-gradient(180deg, rgba(6, 10, 20, 0.25), rgba(4, 6, 12, 0.92));
+  border-top: 1px solid rgba(241, 245, 249, 0.12);
+  backdrop-filter: blur(8px);
+  z-index: 40;
+  pointer-events: none;
+}
+
+.star-reset-progress-inner {
+  width: min(980px, 100%);
+  margin: 0 auto;
+  display: grid;
+  gap: 6px;
+}
+
+.star-reset-progress-label {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  color: rgba(226, 232, 240, 0.7);
+  font-size: 12px;
+  font-family: var(--font-mono);
+  letter-spacing: 0.2px;
+}
+
+.star-reset-progress-title {
+  color: rgba(226, 232, 240, 0.9);
+  font-family: var(--font-heading);
+  font-weight: 700;
+}
+
+.star-reset-progress-track {
+  height: 10px;
+  border-radius: 999px;
+  background: rgba(2, 6, 23, 0.6);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  overflow: hidden;
+  box-shadow: inset 0 0 12px rgba(0, 0, 0, 0.45);
+}
+
+.star-reset-progress-fill {
+  height: 100%;
+  width: 0%;
+  background: linear-gradient(90deg, rgba(96, 165, 250, 0.75), rgba(59, 130, 246, 0.92));
+  box-shadow: 0 0 14px rgba(96, 165, 250, 0.6);
+  transition: width 0.25s ease;
+}
+
+.star-reset-progress-fill.is-ready {
+  background: linear-gradient(90deg, rgba(96, 165, 250, 0.75), rgba(59, 130, 246, 0.92));
+  box-shadow:
+    0 0 18px rgba(226, 232, 240, 0.75),
+    0 0 32px rgba(148, 163, 184, 0.55);
+}
+
+.star-reset-progress-track.is-ready {
+  box-shadow:
+    inset 0 0 12px rgba(0, 0, 0, 0.45),
+    0 0 16px rgba(96, 165, 250, 0.55),
+    0 0 28px rgba(59, 130, 246, 0.45);
+}
+
 .toast {
   pointer-events: auto;
   border-radius: 14px;
@@ -260,6 +327,14 @@ button {
     0 1px 0 rgba(255, 255, 255, 0.06) inset;
 }
 
+#star-board-btn.is-ready {
+  border-color: rgba(96, 165, 250, 0.55);
+  box-shadow:
+    0 0 16px rgba(96, 165, 250, 0.55),
+    0 8px 18px rgba(0, 0, 0, 0.45),
+    0 1px 0 rgba(255, 255, 255, 0.08) inset;
+}
+
 button:hover {
   background: rgba(255, 255, 255, 0.09);
 }
@@ -297,6 +372,7 @@ button:disabled {
   cursor: not-allowed;
   opacity: 0.55;
   box-shadow: none;
+  pointer-events: none;
 }
 
 button.glow-white:not(:disabled) {
@@ -416,6 +492,36 @@ button.glow-white:not(:disabled):hover {
   align-items: center;
   justify-content: space-between;
   gap: 10px;
+  font-size: clamp(11px, 1.4vw, 13px);
+  line-height: 1.1;
+}
+
+.tooltip-wrap {
+  display: inline-flex;
+  align-items: stretch;
+}
+
+.upgrade-row > .tooltip-wrap,
+.stars-upgrade-row > .tooltip-wrap {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.upgrade-row > .tooltip-wrap > button,
+.stars-upgrade-row > .tooltip-wrap > button {
+  width: 100%;
+}
+
+.ball-actions button .btn-label {
+  flex: 1 1 auto;
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.ball-actions button .btn-cost {
+  flex: 0 0 auto;
 }
 
 .upgrade-row {
@@ -466,12 +572,20 @@ button.glow-white:not(:disabled):hover {
   height: 38px;
   flex: 1;
   justify-content: center;
+  font-size: clamp(11px, 1.2vw, 13px);
+  line-height: 1.1;
   background: linear-gradient(90deg, rgba(74, 137, 255, 0.22), rgba(112, 181, 255, 0.35));
   border: 1px solid rgba(132, 188, 255, 0.65);
   box-shadow:
     0 0 18px rgba(103, 167, 255, 0.55),
     inset 0 0 18px rgba(103, 167, 255, 0.35);
   color: #eaf2ff;
+}
+
+.clears-modal .upgrade-row .btn-label,
+#clears-modal .upgrade-row .btn-label,
+#clears-shop-modal .upgrade-row .btn-label {
+  white-space: nowrap;
 }
 
 .clears-modal .upgrade-row button:hover:not(:disabled),
@@ -529,7 +643,7 @@ button.glow-white:not(:disabled):hover {
 }
 
 #game-canvas {
-  width: min(100%, 1000px);
+  width: min(100%, 70vh, 1000px);
   height: auto;
   max-width: 100%;
   max-height: 100%;
@@ -865,6 +979,8 @@ button.glow-white:not(:disabled):hover {
   align-items: center;
   justify-content: center;
   gap: 10px;
+  font-size: clamp(11px, 1.2vw, 13px);
+  line-height: 1.1;
   background: linear-gradient(90deg, rgba(74, 137, 255, 0.22), rgba(112, 181, 255, 0.35));
   border: 1px solid rgba(132, 188, 255, 0.65);
   box-shadow:
@@ -872,6 +988,10 @@ button.glow-white:not(:disabled):hover {
     inset 0 0 18px rgba(103, 167, 255, 0.35);
   border-radius: 12px;
   color: #eaf2ff;
+}
+
+.stars-upgrade-btn .btn-label {
+  white-space: nowrap;
 }
 
 .stars-upgrade-btn:hover:not(:disabled) {

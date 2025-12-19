@@ -22,11 +22,12 @@ export const BALL_TYPES = {
     onBlockHit({ grid, col, row, ball }) {
       const r = ball.splashRadiusCells ?? 1;
       const center = grid.applyDamageCell(col, row, ball.damage);
+      const splashDamage = Math.ceil(ball.damage * (ball.splashFalloff ?? 0.55));
       const neighbors = grid.applyDamageRadiusCells(
         col,
         row,
         r,
-        ball.damage * (ball.splashFalloff ?? 0.55),
+        splashDamage,
         { includeCenter: false }
       );
       return center.damageDealt + neighbors.damageDealt;
@@ -48,7 +49,7 @@ export const BALL_TYPES = {
     name: "Sweeper",
     color: "#a78bfa",
     radius: 7,
-    baseDamage: 1,
+    baseDamage: 10,
     bounceOnBlocks: true,
     onBlockHit({ grid, col, row, ball }) {
       const hitRes = grid.applyDamageCell(col, row, ball.damage);
@@ -238,7 +239,7 @@ export class Ball {
           for (let p = 0; p < extraPieces && candidates.length > 0; p++) {
             const pick = (Math.random() * candidates.length) | 0;
             const target = candidates.splice(pick, 1)[0];
-            const dmg = computeHitDamage(this, grid, target.index, pieceDamageBase);
+            const dmg = Math.ceil(computeHitDamage(this, grid, target.index, pieceDamageBase));
             destroyed += grid.applyDamageCell(target.col, target.row, dmg).damageDealt;
           }
         }
