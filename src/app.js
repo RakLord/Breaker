@@ -1242,6 +1242,36 @@ export function startApp() {
     const keepStarStats = { ...(player.starStats ?? {}) };
     const keepManualBallToastShown = !!player.tutorials?.manualBallToastShown;
     const keepUiState = player.ui && typeof player.ui === "object" ? { ...player.ui } : null;
+    const keepNormal = getStarUpgradeOwned("persistence");
+    const keepOthers = getStarUpgradeOwned("advancedPersistence");
+    const preservedBallTypes = {};
+    if (keepNormal) {
+      const s = ensureBallTypeState(player, "normal");
+      preservedBallTypes.normal = {
+        damageLevel: s.damageLevel,
+        speedLevel: s.speedLevel,
+        rangeLevel: s.rangeLevel,
+        sizeLevel: s.sizeLevel,
+        pieceLevel: s.pieceLevel,
+        critLevel: s.critLevel,
+        executionLevel: s.executionLevel,
+      };
+    }
+    if (keepOthers) {
+      for (const typeId of Object.keys(BALL_TYPES)) {
+        if (typeId === "normal") continue;
+        const s = ensureBallTypeState(player, typeId);
+        preservedBallTypes[typeId] = {
+          damageLevel: s.damageLevel,
+          speedLevel: s.speedLevel,
+          rangeLevel: s.rangeLevel,
+          sizeLevel: s.sizeLevel,
+          pieceLevel: s.pieceLevel,
+          critLevel: s.critLevel,
+          executionLevel: s.executionLevel,
+        };
+      }
+    }
     keepStarStats.prestiges = Math.max(0, (keepStarStats.prestiges ?? 0) | 0) + 1;
     keepStarStats.earnedTotal = Math.max(0, (keepStarStats.earnedTotal ?? 0) | 0) + gain;
     keepStarStats.lastPrestigeLevel = player.progress?.level ?? null;
@@ -1251,6 +1281,7 @@ export function startApp() {
     player.stars = keepStars;
     player.starUpgrades = keepStarUpgrades;
     player.starStats = keepStarStats;
+    player.ballTypes = preservedBallTypes;
     ensureTutorialState().manualBallToastShown = keepManualBallToastShown;
     if (keepUiState) player.ui = keepUiState;
     syncUiStateFromPlayer();
