@@ -1009,10 +1009,13 @@ export function startApp() {
 
   function ensureUiState() {
     if (!player.ui || typeof player.ui !== "object") {
-      player.ui = { ballContextEnabled: false, showHpOverlay: false };
+      player.ui = { ballContextEnabled: false, showHpOverlay: false, ballCardMinimized: {} };
     }
     player.ui.ballContextEnabled = !!player.ui.ballContextEnabled;
     player.ui.showHpOverlay = !!player.ui.showHpOverlay;
+    if (!player.ui.ballCardMinimized || typeof player.ui.ballCardMinimized !== "object") {
+      player.ui.ballCardMinimized = {};
+    }
     return player.ui;
   }
 
@@ -1027,6 +1030,16 @@ export function startApp() {
     const uiState = ensureUiState();
     uiState.ballContextEnabled = !!state.ballContextEnabled;
     uiState.showHpOverlay = !!state.showHpOverlay;
+  }
+
+  function getBallCardMinimized(typeId) {
+    const uiState = ensureUiState();
+    return !!uiState.ballCardMinimized?.[typeId];
+  }
+
+  function setBallCardMinimized(typeId, minimized) {
+    const uiState = ensureUiState();
+    uiState.ballCardMinimized[typeId] = !!minimized;
   }
 
   function getBetterFormulaLevel() {
@@ -1336,6 +1349,8 @@ export function startApp() {
     getCritChanceForLevel,
     getExecuteRatioForLevel,
     getBallDps,
+    getBallCardMinimized,
+    setBallCardMinimized,
     setBallContextType,
     isBallContextEnabled,
   };

@@ -22,6 +22,6 @@ export function formatInt(d) {
     }
     const text = dec.toString();
     if (text === "NaN" || text === "Infinity" || text === "-Infinity") return "0";
-    if (dec.abs().gte(1e6)) return dec.toExponential(2);
+    if (dec.abs().gte(1e6)) return dec.toExponential(2).replace("e+", "e");
     return dec.toFixed(0);
 }

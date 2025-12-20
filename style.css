@@ -540,6 +540,58 @@ button.glow-white:not(:disabled):hover {
   gap: 10px;
 }
 
+.ball-card-toggle {
+  width: 26px;
+  height: 22px;
+  padding: 0;
+  border-radius: 8px;
+  border: 1px solid rgba(148, 163, 184, 0.35);
+  background: rgba(15, 23, 42, 0.6);
+  box-shadow: none;
+  position: relative;
+  display: grid;
+  place-items: center;
+}
+
+.ball-card-toggle:not(:disabled) {
+  box-shadow: none;
+}
+
+.ball-card-toggle:hover {
+  background: rgba(30, 41, 59, 0.75);
+  border-color: rgba(125, 211, 252, 0.7);
+}
+
+.ball-card-toggle::before {
+  content: "";
+  width: 14px;
+  height: 2px;
+  border-radius: 999px;
+  background: rgba(226, 232, 240, 0.85);
+}
+
+.ball-card-toggle::after {
+  content: none;
+}
+
+.ball-card.card-minimized {
+  gap: 0;
+}
+
+.ball-card.card-minimized .ball-card-body {
+  max-height: 0;
+  opacity: 0;
+  transform: translateY(-4px);
+  pointer-events: none;
+}
+
+.ball-card.card-minimized .ball-card-toggle {
+  display: none;
+}
+
+.ball-card.card-minimized .ball-card-header {
+  cursor: pointer;
+}
 .ball-name {
   font-size: 12px;
   color: rgba(226, 232, 240, 0.9);
@@ -559,6 +611,17 @@ button.glow-white:not(:disabled):hover {
   display: flex;
   flex-direction: column;
   gap: 8px;
+}
+
+.ball-card-body {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  overflow: hidden;
+  max-height: 1200px;
+  opacity: 1;
+  transform: translateY(0);
+  transition: max-height 0.2s ease, opacity 0.2s ease, transform 0.2s ease;
 }
 
 .ball-upgrades .tooltip-wrap {
@@ -662,9 +725,11 @@ button.glow-white:not(:disabled):hover {
   display: none;
 }
 
-.ball-card.card-collapsed .ball-upgrades,
-.ball-card.card-collapsed .ball-stats {
-  display: none;
+.ball-card.card-collapsed .ball-card-body {
+  max-height: 0;
+  opacity: 0;
+  transform: translateY(-4px);
+  pointer-events: none;
 }
 
 .ball-count {

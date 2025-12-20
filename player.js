@@ -131,6 +131,7 @@ export function createDefaultPlayer() {
     ui: {
       ballContextEnabled: false,
       showHpOverlay: false,
+      ballCardMinimized: {},
     },
     meta: {
       createdAt: Date.now(),
@@ -307,9 +308,18 @@ export function normalizePlayer(raw) {
   };
 
   const rawUi = raw.ui && typeof raw.ui === "object" ? raw.ui : {};
+  const rawBallCardMinimized = rawUi.ballCardMinimized && typeof rawUi.ballCardMinimized === "object"
+    ? rawUi.ballCardMinimized
+    : {};
+  const ballCardMinimized = {};
+  for (const [key, value] of Object.entries(rawBallCardMinimized)) {
+    if (!key) continue;
+    ballCardMinimized[key] = !!value;
+  }
   const ui = {
     ballContextEnabled: !!rawUi.ballContextEnabled,
     showHpOverlay: !!rawUi.showHpOverlay,
+    ballCardMinimized,
   };
 
   return {
