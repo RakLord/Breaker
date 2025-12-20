@@ -59,6 +59,7 @@ const CHANGELOG_LATEST = {
     "More Board Wipes star upgrade (Tier 5).",
     "Clear Fire Sale star upgrade (Tier 5).",
     "Ball DPS tracking (10s window) shown in ball cards.",
+    "DPS Stats star upgrade (Tier 1).",
   ],
 };
 
@@ -114,6 +115,7 @@ export function startApp() {
     starClearsLogStateEl,
     starDmgMultStateEl,
     starPersistStateEl,
+    starDpsStateEl,
     starAdvPersistStateEl,
     starHeavyStateEl,
     starCollapseStateEl,
@@ -139,6 +141,7 @@ export function startApp() {
     starClearsLogBuyBtn,
     starDmgMultBuyBtn,
     starPersistBuyBtn,
+    starDpsBuyBtn,
     starAdvPersistBuyBtn,
     starHeavyBuyBtn,
     starCollapseBuyBtn,
@@ -915,6 +918,7 @@ export function startApp() {
         clearsLogMult: false,
         damageMulti: false,
         persistence: false,
+        dpsStats: false,
         advancedPersistence: false,
         heavyBall: false,
         starCollapse: false,
@@ -937,6 +941,7 @@ export function startApp() {
       "clearsLogMult",
       "damageMulti",
       "persistence",
+      "dpsStats",
       "advancedPersistence",
       "heavyBall",
       "starCollapse",
@@ -1485,6 +1490,10 @@ export function startApp() {
     if (buyStarUpgrade("persistence", 1)) setMessage("Persistance unlocked");
     else setMessage("Need 1 Star");
   });
+  starDpsBuyBtn?.addEventListener("click", () => {
+    if (buyStarUpgrade("dpsStats", 1)) setMessage("DPS stats unlocked");
+    else setMessage("Need 1 Star");
+  });
   starAdvPersistBuyBtn?.addEventListener("click", () => {
     if (!anyTier1Bought()) return setMessage("Buy a Tier 1 upgrade first");
     if (buyStarUpgrade("advancedPersistence", 3)) setMessage("Advanced Persistance unlocked");
@@ -1980,6 +1989,7 @@ export function startApp() {
     setStarOwned(starClearsLogStateEl, getStarUpgradeOwned("clearsLogMult"));
     setStarOwned(starDmgMultStateEl, getStarUpgradeOwned("damageMulti"));
     setStarOwned(starPersistStateEl, getStarUpgradeOwned("persistence"));
+    setStarOwned(starDpsStateEl, getStarUpgradeOwned("dpsStats"));
     setStarOwned(starAdvPersistStateEl, getStarUpgradeOwned("advancedPersistence"));
     setStarOwned(starHeavyStateEl, getStarUpgradeOwned("heavyBall"));
     setStarOwned(starCollapseStateEl, getStarUpgradeOwned("starCollapse"));
@@ -2053,6 +2063,7 @@ export function startApp() {
       starClearsLogBuyBtn.disabled = tier2Locked || getStarUpgradeOwned("clearsLogMult") || starsNow < 3;
     if (starDmgMultBuyBtn) starDmgMultBuyBtn.disabled = tier2Locked || getStarUpgradeOwned("damageMulti") || starsNow < 3;
     if (starPersistBuyBtn) starPersistBuyBtn.disabled = getStarUpgradeOwned("persistence") || starsNow < 1;
+    if (starDpsBuyBtn) starDpsBuyBtn.disabled = getStarUpgradeOwned("dpsStats") || starsNow < 1;
     if (starAdvPersistBuyBtn)
       starAdvPersistBuyBtn.disabled =
         tier2Locked || getStarUpgradeOwned("advancedPersistence") || starsNow < 3;

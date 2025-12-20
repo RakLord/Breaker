@@ -8,6 +8,7 @@
 - More Board Wipes star upgrade (Tier 5).
 - Clear Fire Sale star upgrade (Tier 5).
 - Ball DPS tracking (10s window) shown in ball cards.
+- DPS Stats star upgrade (Tier 1).
 
 ## V0.2.3
 - Tier 3 Heavy ball unlock (slow, high damage, no bounce on destroy).

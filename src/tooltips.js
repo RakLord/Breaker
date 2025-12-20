@@ -14,6 +14,7 @@ export const TOOLTIP_TEXT = {
   "star-clears-log": "More clears based on bricks cleared.",
   "star-dmg-multi": "Double all ball damage.",
   "star-persist": "Keep normal ball upgrades after prestige.",
+  "star-dps": "Show DPS stats on ball cards.",
   "star-adv-persist": "Keep non-normal ball upgrades after prestige.",
   "star-heavy-ball": "Unlock the Heavy ball.",
   "star-collapse": "Star resets award multiple stars based on level.",
