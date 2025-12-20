@@ -98,6 +98,11 @@ export function createDefaultPlayer() {
       betterBasicBalls: false,
       brickHpBoost: 0,
       morePoints: 0,
+      bufferOverflow: 0,
+      moreStars: false,
+      boardWipe: false,
+      moreBoardWipes: false,
+      clearFireSale: false,
     },
     ballTypes: {},
     cursor: {
@@ -224,6 +229,11 @@ export function normalizePlayer(raw) {
     betterBasicBalls: !!rawStarUpgrades.betterBasicBalls,
     brickHpBoost: Math.max(0, Math.min(3, (rawStarUpgrades.brickHpBoost ?? 0) | 0)),
     morePoints: Math.max(0, Math.min(10, (rawStarUpgrades.morePoints ?? 0) | 0)),
+    bufferOverflow: Math.max(0, Math.min(3, (rawStarUpgrades.bufferOverflow ?? 0) | 0)),
+    moreStars: !!rawStarUpgrades.moreStars,
+    boardWipe: !!rawStarUpgrades.boardWipe,
+    moreBoardWipes: !!rawStarUpgrades.moreBoardWipes,
+    clearFireSale: !!rawStarUpgrades.clearFireSale,
   };
 
   const rawBallTypes = raw.ballTypes && typeof raw.ballTypes === "object" ? raw.ballTypes : {};
@@ -391,10 +401,14 @@ export function getDensityUpgradeLevel(player) {
   return ensureClearsUpgrades(player).densityLevel;
 }
 
+function getClearsShopCostMultiplier(player) {
+  return player?.starUpgrades?.clearFireSale ? 0.01 : 1;
+}
+
 export function getDensityUpgradeCost(player) {
   const level = getDensityUpgradeLevel(player);
   const cfg = CLEARS_SHOP_CONFIG.density;
-  return cfg.baseCost.mul(cfg.costGrowth.pow(level));
+  return cfg.baseCost.mul(cfg.costGrowth.pow(level)).mul(getClearsShopCostMultiplier(player));
 }
 
 export function getGridSizeUpgradeLevel(player) {
@@ -404,7 +418,7 @@ export function getGridSizeUpgradeLevel(player) {
 export function getGridSizeUpgradeCost(player) {
   const level = getGridSizeUpgradeLevel(player);
   const cfg = CLEARS_SHOP_CONFIG.gridSize;
-  return cfg.baseCost.mul(cfg.costGrowth.pow(level));
+  return cfg.baseCost.mul(cfg.costGrowth.pow(level)).mul(getClearsShopCostMultiplier(player));
 }
 
 export function getBrickHpUpgradeLevel(player) {
@@ -421,7 +435,7 @@ export function getBrickHpEffectLevel(player) {
 export function getBrickHpUpgradeCost(player) {
   const level = getBrickHpUpgradeLevel(player);
   const cfg = CLEARS_SHOP_CONFIG.brickHp;
-  return cfg.baseCost.mul(cfg.costGrowth.pow(level));
+  return cfg.baseCost.mul(cfg.costGrowth.pow(level)).mul(getClearsShopCostMultiplier(player));
 }
 
 export function ensureBallTypeState(player, typeId) {

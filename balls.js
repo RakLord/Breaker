@@ -7,7 +7,7 @@ export const BALL_TYPES = {
     baseDamage: 1,
     bounceOnBlocks: true,
     onBlockHit({ grid, col, row, ball }) {
-      return grid.applyDamageCell(col, row, ball.damage).damageDealt;
+      return grid.applyDamageCell(col, row, ball.damage, ball.typeId).damageDealt;
     },
   },
   splash: {
@@ -21,14 +21,14 @@ export const BALL_TYPES = {
     splashFalloff: 0.55,
     onBlockHit({ grid, col, row, ball }) {
       const r = ball.splashRadiusCells ?? 1;
-      const center = grid.applyDamageCell(col, row, ball.damage);
+      const center = grid.applyDamageCell(col, row, ball.damage, ball.typeId);
       const splashDamage = Math.ceil(ball.damage * (ball.splashFalloff ?? 0.55));
       const neighbors = grid.applyDamageRadiusCells(
         col,
         row,
         r,
         splashDamage,
-        { includeCenter: false }
+        { includeCenter: false, sourceTypeId: ball.typeId }
       );
       return center.damageDealt + neighbors.damageDealt;
     },
@@ -41,7 +41,7 @@ export const BALL_TYPES = {
     baseDamage: 10,
     bounceOnBlocks: true,
     onBlockHit({ grid, col, row, ball }) {
-      return grid.applyDamageCell(col, row, ball.damage).damageDealt;
+      return grid.applyDamageCell(col, row, ball.damage, ball.typeId).damageDealt;
     },
   },
   sweeper: {
@@ -52,9 +52,9 @@ export const BALL_TYPES = {
     baseDamage: 10,
     bounceOnBlocks: true,
     onBlockHit({ grid, col, row, ball }) {
-      const hitRes = grid.applyDamageCell(col, row, ball.damage);
+      const hitRes = grid.applyDamageCell(col, row, ball.damage, ball.typeId);
       if (hitRes.destroyed <= 0) return hitRes.damageDealt;
-      const rowRes = grid.applyDamageRow(row, ball.damage, { excludeCol: col });
+      const rowRes = grid.applyDamageRow(row, ball.damage, { excludeCol: col, sourceTypeId: ball.typeId });
       return hitRes.damageDealt + rowRes.damageDealt;
     },
   },
@@ -66,7 +66,7 @@ export const BALL_TYPES = {
     baseDamage: 100,
     bounceOnBlocks: true,
     onBlockHit({ grid, col, row, ball }) {
-      const hitRes = grid.applyDamageCell(col, row, ball.damage);
+      const hitRes = grid.applyDamageCell(col, row, ball.damage, ball.typeId);
       if (!ball.data || typeof ball.data !== "object") ball.data = {};
       ball.data.skipBounce = hitRes.destroyed > 0;
       return hitRes.damageDealt;
@@ -223,47 +223,62 @@ export class Ball {
           this.vy = (dy / len) * speed;
         }
       }
+      if (bouncedWall && this.typeId === "heavy") {
+        const speed = Math.hypot(this.vx, this.vy) || 1;
+        const angle = Math.atan2(this.vy, this.vx);
+        const spread = Math.PI / 4;
+        const offset = (Math.random() * 2 - 1) * spread;
+        const nextAngle = angle + offset;
+        this.vx = Math.cos(nextAngle) * speed;
+        this.vy = Math.sin(nextAngle) * speed;
+      }
 
       const hit = grid.findCircleCollision(this.x, this.y, this.radius);
       if (hit) {
-        const baseDamage = this.damage;
-        const originalDamage = this.damage;
-        const primaryDamage = computeHitDamage(this, grid, hit.index, baseDamage);
-        this.damage = primaryDamage;
-        destroyed += this.type.onBlockHit({ grid, col: hit.col, row: hit.row, ball: this });
-        this.damage = originalDamage;
+        const prevSourceType = grid.damageSourceTypeId;
+        grid.damageSourceTypeId = this.typeId;
+        try {
+          const baseDamage = this.damage;
+          const originalDamage = this.damage;
+          const primaryDamage = computeHitDamage(this, grid, hit.index, baseDamage);
+          this.damage = primaryDamage;
+          destroyed += this.type.onBlockHit({ grid, col: hit.col, row: hit.row, ball: this });
+          this.damage = originalDamage;
 
-        const pieceCount = getBallPieceCount(this);
-        const extraPieces = pieceCount - 1;
-        if (extraPieces > 0) {
-          const candidates = [];
-          for (let dy = -1; dy <= 1; dy++) {
-            for (let dx = -1; dx <= 1; dx++) {
-              if (dx === 0 && dy === 0) continue;
-              const col = hit.col + dx;
-              const row = hit.row + dy;
-              if (!grid.inBounds(col, row)) continue;
-              const idx = grid.index(col, row);
-              if (grid.hp[idx] <= 0) continue;
-              candidates.push({ col, row, index: idx });
+          const pieceCount = getBallPieceCount(this);
+          const extraPieces = pieceCount - 1;
+          if (extraPieces > 0) {
+            const candidates = [];
+            for (let dy = -1; dy <= 1; dy++) {
+              for (let dx = -1; dx <= 1; dx++) {
+                if (dx === 0 && dy === 0) continue;
+                const col = hit.col + dx;
+                const row = hit.row + dy;
+                if (!grid.inBounds(col, row)) continue;
+                const idx = grid.index(col, row);
+                if (grid.hp[idx] <= 0) continue;
+                candidates.push({ col, row, index: idx });
+              }
+            }
+
+            const pieceDamageBase = baseDamage * 0.65;
+            for (let p = 0; p < extraPieces && candidates.length > 0; p++) {
+              const pick = (Math.random() * candidates.length) | 0;
+              const target = candidates.splice(pick, 1)[0];
+              const dmg = Math.ceil(computeHitDamage(this, grid, target.index, pieceDamageBase));
+              destroyed += grid.applyDamageCell(target.col, target.row, dmg, this.typeId).damageDealt;
             }
           }
 
-          const pieceDamageBase = baseDamage * 0.65;
-          for (let p = 0; p < extraPieces && candidates.length > 0; p++) {
-            const pick = (Math.random() * candidates.length) | 0;
-            const target = candidates.splice(pick, 1)[0];
-            const dmg = Math.ceil(computeHitDamage(this, grid, target.index, pieceDamageBase));
-            destroyed += grid.applyDamageCell(target.col, target.row, dmg).damageDealt;
+          const skipBounce = !!this.data?.skipBounce;
+          if (this.data) this.data.skipBounce = false;
+          this.x += hit.nx * (hit.penetration + 0.01);
+          this.y += hit.ny * (hit.penetration + 0.01);
+          if (this.type.bounceOnBlocks && !skipBounce) {
+            reflectVelocity(this, hit.nx, hit.ny);
           }
-        }
-
-        const skipBounce = !!this.data?.skipBounce;
-        if (this.data) this.data.skipBounce = false;
-        this.x += hit.nx * (hit.penetration + 0.01);
-        this.y += hit.ny * (hit.penetration + 0.01);
-        if (this.type.bounceOnBlocks && !skipBounce) {
-          reflectVelocity(this, hit.nx, hit.ny);
+        } finally {
+          grid.damageSourceTypeId = prevSourceType;
         }
       }
     }

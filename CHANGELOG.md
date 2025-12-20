@@ -1,5 +1,14 @@
 # Changelog
 
+## V0.2.4
+- Unreleased.
+- Buffer Overflow star upgrade (Tier 4).
+- More Stars star upgrade (Tier 5).
+- Board Wipe star upgrade (Tier 4).
+- More Board Wipes star upgrade (Tier 5).
+- Clear Fire Sale star upgrade (Tier 5).
+- Ball DPS tracking (10s window) shown in ball cards.
+
 ## V0.2.3
 - Tier 3 Heavy ball unlock (slow, high damage, no bounce on destroy).
 - Star Collapse upgrade for multi-star prestige rewards.

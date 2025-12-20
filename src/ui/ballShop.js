@@ -91,6 +91,7 @@ export function ensureBallCard(ctx, typeId) {
         <div class="ball-stats">
           <div>Damage: <span data-role="damage">0</span></div>
           <div>Speed: <span data-role="speed">x1.00</span></div>
+          <div>DPS: <span data-role="dps">0.00</span></div>
           <div class="hidden" data-role="pieces-row">Propagation: <span data-role="pieces">1</span></div>
           <div class="hidden" data-role="crit-row">Crit: <span data-role="crit">0%</span></div>
           <div class="hidden" data-role="exec-row">Execute: <span data-role="exec">0%</span></div>
@@ -251,6 +252,12 @@ export function updateBallShopCards(ctx) {
     if (dmgEl) dmgEl.textContent = (getBallDamageValue(player, typeId, baseDamage) * starDamageMult).toFixed(2);
     const spdEl = card.querySelector('[data-role="speed"]');
     if (spdEl) spdEl.textContent = `x${spdMult.toFixed(2)}`;
+    const dpsEl = card.querySelector('[data-role="dps"]');
+    if (dpsEl) {
+      const dpsRaw = typeof ctx.getBallDps === "function" ? ctx.getBallDps(typeId) : 0;
+      const dpsValue = Number.isFinite(dpsRaw) ? dpsRaw : 0;
+      dpsEl.textContent = dpsValue.toFixed(2);
+    }
     if (typeId === "splash") {
       const baseR = type.splashRadiusCells ?? 1;
       const radius = baseR + (typeState.rangeLevel ?? 0);

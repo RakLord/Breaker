@@ -10,7 +10,7 @@
     <div id="app-shell">
       <header>
         <h1>Breaker</h1>
-        <div id="app-version" role="button" tabindex="0" aria-haspopup="dialog" aria-expanded="false">V0.2.3</div>
+        <div id="app-version" role="button" tabindex="0" aria-haspopup="dialog" aria-expanded="false">V0.2.4</div>
       </header>
 
       <main id="game-root">
@@ -149,7 +149,7 @@
             <div class="modal-backdrop" data-action="close"></div>
             <div class="modal-panel" role="dialog" aria-modal="true" aria-labelledby="star-board-title">
               <div class="modal-header">
-                <div id="star-board-title" class="modal-title">Star Board</div>
+                <div id="star-board-title" class="modal-title">UPGRADES</div>
                 <div id="star-board-count" class="modal-title">Stars: 0</div>
                 <button id="star-board-close" type="button" class="modal-close" aria-label="Close">X</button>
               </div>
@@ -157,7 +157,7 @@
                 <div id="star-board-balance" class="stars-balance-card"></div>
 
                 <div class="stars-section" id="star-tier1-box">
-                  <div class="stars-section-title">Tier 1 • Core Unlocks</div>
+                  <div class="stars-section-title">Tier 1</div>
                   <div class="stars-section-sub">Unlock new ball upgrade rows permanently.</div>
                   <div class="stars-upgrades">
                     <div class="stars-upgrade-row">
@@ -197,14 +197,14 @@
                       <button id="star-persist-buy" type="button" class="stars-upgrade-btn" data-tooltip-key="star-persist">
                         <span class="stars-icon" aria-hidden="true">P</span>
                         <span class="btn-label">Persistance</span>
-                        <span class="btn-cost">(3)</span>
+                        <span class="btn-cost">(1)</span>
                       </button>
                     </div>
                   </div>
                 </div>
 
                 <div class="stars-section hidden" id="star-tier2-box">
-                  <div class="stars-section-title">Tier 2 • Expansion</div>
+                  <div class="stars-section-title">Tier 2</div>
                   <div class="stars-section-sub">Deeper upgrades unlocked after Tier 1.</div>
                   <div class="stars-upgrades">
                     <div class="stars-upgrade-row">
@@ -256,7 +256,7 @@
                 </div>
 
                 <div class="stars-section hidden" id="star-tier3-box">
-                  <div class="stars-section-title">Tier 3 Meta</div>
+                  <div class="stars-section-title">Tier 3</div>
                   <div class="stars-section-sub">Meta upgrades unlocked after Tier 2.</div>
                   <div class="stars-upgrades">
                     <div class="stars-upgrade-row">
@@ -305,7 +305,7 @@
                 </div>
 
                 <div class="stars-section hidden" id="star-tier4-box">
-                  <div class="stars-section-title">Tier 4 Ascension</div>
+                  <div class="stars-section-title">Tier 4</div>
                   <div class="stars-section-sub">Core upgrades unlocked after Tier 3.</div>
                   <div class="stars-upgrades">
                     <div class="stars-upgrade-row">
@@ -327,6 +327,78 @@
                         <span class="stars-icon" aria-hidden="true">F</span>
                         <span class="btn-label">Better Star Formula</span>
                         <span class="btn-cost">(10)</span>
+                      </button>
+                    </div>
+                    <div class="stars-upgrade-row">
+                      <div class="stars-upgrade-level"><span id="star-bufferflow-state">0/3</span></div>
+                      <button
+                        id="star-bufferflow-buy"
+                        type="button"
+                        class="stars-upgrade-btn"
+                        data-tooltip-key="star-buffer-overflow"
+                      >
+                        <span class="stars-icon" aria-hidden="true">O</span>
+                        <span class="btn-label">Buffer Overflow</span>
+                        <span class="btn-cost">(10)</span>
+                      </button>
+                    </div>
+                    <div class="stars-upgrade-row">
+                      <div class="stars-upgrade-level"><span id="star-boardwipe-state">-</span></div>
+                      <button
+                        id="star-boardwipe-buy"
+                        type="button"
+                        class="stars-upgrade-btn"
+                        data-tooltip-key="star-board-wipe"
+                      >
+                        <span class="stars-icon" aria-hidden="true">W</span>
+                        <span class="btn-label">Board Wipe</span>
+                        <span class="btn-cost">(10)</span>
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="stars-section hidden" id="star-tier5-box">
+                  <div class="stars-section-title">Tier 5</div>
+                  <div class="stars-section-sub">Apex upgrades unlocked after Tier 4.</div>
+                  <div class="stars-upgrades">
+                    <div class="stars-upgrade-row">
+                      <div class="stars-upgrade-level"><span id="star-morestars-state">-</span></div>
+                      <button
+                        id="star-morestars-buy"
+                        type="button"
+                        class="stars-upgrade-btn"
+                        data-tooltip-key="star-more-stars"
+                      >
+                        <span class="stars-icon" aria-hidden="true">S</span>
+                        <span class="btn-label">More Stars</span>
+                        <span class="btn-cost">(15)</span>
+                      </button>
+                    </div>
+                    <div class="stars-upgrade-row">
+                      <div class="stars-upgrade-level"><span id="star-moreboardwipes-state">-</span></div>
+                      <button
+                        id="star-moreboardwipes-buy"
+                        type="button"
+                        class="stars-upgrade-btn"
+                        data-tooltip-key="star-more-board-wipes"
+                      >
+                        <span class="stars-icon" aria-hidden="true">W</span>
+                        <span class="btn-label">More Board Wipes</span>
+                        <span class="btn-cost">(15)</span>
+                      </button>
+                    </div>
+                    <div class="stars-upgrade-row">
+                      <div class="stars-upgrade-level"><span id="star-clearfiresale-state">-</span></div>
+                      <button
+                        id="star-clearfiresale-buy"
+                        type="button"
+                        class="stars-upgrade-btn"
+                        data-tooltip-key="star-clear-fire-sale"
+                      >
+                        <span class="stars-icon" aria-hidden="true">F</span>
+                        <span class="btn-label">Clear Fire Sale</span>
+                        <span class="btn-cost">(15)</span>
                       </button>
                     </div>
                   </div>
@@ -468,7 +540,7 @@
         <div class="changelog-panel">
           <div class="changelog-header">
             <div id="changelog-title">Changelog</div>
-            <div id="changelog-version" class="changelog-version">V0.2.3</div>
+            <div id="changelog-version" class="changelog-version">V0.2.4</div>
           </div>
           <ul id="changelog-list" class="changelog-list"></ul>
         </div>

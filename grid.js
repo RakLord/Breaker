@@ -107,30 +107,40 @@ export class BlockGrid {
     return col >= 0 && row >= 0 && col < this.cols && row < this.rows;
   }
 
-  applyDamageIndex(index, amount) {
+  applyDamageIndex(index, amount, sourceTypeId = null) {
     const prev = this.hp[index];
     if (prev <= 0 || amount <= 0) return { damageDealt: 0, destroyed: 0 };
     const next = prev - amount;
     this.hp[index] = next > 0 ? next : 0;
     const damageDealt = prev - this.hp[index];
     const destroyed = prev > 0 && this.hp[index] <= 0 ? 1 : 0;
+    if (destroyed && typeof this.onCellDestroyed === "function") {
+      const source = sourceTypeId ?? this.damageSourceTypeId;
+      this.onCellDestroyed(index, source);
+    }
     return { damageDealt, destroyed };
   }
 
-  applyDamageCell(col, row, amount) {
+  applyDamageCell(col, row, amount, sourceTypeId = null) {
     if (!this.inBounds(col, row)) return { damageDealt: 0, destroyed: 0 };
-    return this.applyDamageIndex(this.index(col, row), amount);
+    return this.applyDamageIndex(this.index(col, row), amount, sourceTypeId);
   }
 
-  damageIndex(index, amount) {
-    return this.applyDamageIndex(index, amount).destroyed;
+  damageIndex(index, amount, sourceTypeId = null) {
+    return this.applyDamageIndex(index, amount, sourceTypeId).destroyed;
   }
 
-  damageCell(col, row, amount) {
-    return this.applyDamageCell(col, row, amount).destroyed;
+  damageCell(col, row, amount, sourceTypeId = null) {
+    return this.applyDamageCell(col, row, amount, sourceTypeId).destroyed;
   }
 
-  applyDamageRadiusCells(centerCol, centerRow, radiusCells, amount, { includeCenter = true } = {}) {
+  applyDamageRadiusCells(
+    centerCol,
+    centerRow,
+    radiusCells,
+    amount,
+    { includeCenter = true, sourceTypeId = null } = {}
+  ) {
     const r = Math.max(0, radiusCells | 0);
     const r2 = r * r;
     let damageDealt = 0;
@@ -147,7 +157,7 @@ export class BlockGrid {
         const dx = col - centerCol;
         if (dx * dx + dy * dy > r2) continue;
         if (!includeCenter && dx === 0 && dy === 0) continue;
-        const res = this.applyDamageCell(col, row, amount);
+        const res = this.applyDamageCell(col, row, amount, sourceTypeId);
         damageDealt += res.damageDealt;
         destroyed += res.destroyed;
       }
@@ -155,7 +165,7 @@ export class BlockGrid {
     return { damageDealt, destroyed };
   }
 
-  applyDamageRow(row, amount, { excludeCol = null } = {}) {
+  applyDamageRow(row, amount, { excludeCol = null, sourceTypeId = null } = {}) {
     const r = row | 0;
     if (r < 0 || r >= this.rows) return { damageDealt: 0, destroyed: 0 };
     let damageDealt = 0;
@@ -163,7 +173,7 @@ export class BlockGrid {
 
     for (let col = 0; col < this.cols; col++) {
       if (excludeCol !== null && col === excludeCol) continue;
-      const res = this.applyDamageCell(col, r, amount);
+      const res = this.applyDamageCell(col, r, amount, sourceTypeId);
       damageDealt += res.damageDealt;
       destroyed += res.destroyed;
     }
@@ -171,8 +181,11 @@ export class BlockGrid {
     return { damageDealt, destroyed };
   }
 
-  damageRadiusCells(centerCol, centerRow, radiusCells, amount, { includeCenter = true } = {}) {
-    return this.applyDamageRadiusCells(centerCol, centerRow, radiusCells, amount, { includeCenter }).destroyed;
+  damageRadiusCells(centerCol, centerRow, radiusCells, amount, { includeCenter = true, sourceTypeId = null } = {}) {
+    return this.applyDamageRadiusCells(centerCol, centerRow, radiusCells, amount, {
+      includeCenter,
+      sourceTypeId,
+    }).destroyed;
   }
 
   generate({
