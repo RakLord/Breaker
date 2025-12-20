@@ -510,11 +510,11 @@ button.glow-white:not(:disabled):hover {
 }
 
 .ball-card {
-  border: 1px solid rgba(255, 255, 255, 0.10);
-  border-radius: 14px;
+  border: 1px solid rgba(148, 163, 184, 0.18);
+  border-radius: 12px;
   padding: 12px;
-  background: rgba(2, 6, 23, 0.22);
-  box-shadow: 0 18px 46px rgba(0, 0, 0, 0.42);
+  background: linear-gradient(180deg, rgba(6, 12, 26, 0.92), rgba(8, 15, 32, 0.7));
+  box-shadow: 0 18px 46px rgba(0, 0, 0, 0.48);
   display: flex;
   flex-direction: column;
   gap: 10px;
@@ -522,8 +522,8 @@ button.glow-white:not(:disabled):hover {
 }
 
 .ball-card:hover {
-  border-color: rgba(248, 250, 252, 0.45);
-  box-shadow: 0 0 14px rgba(248, 250, 252, 0.22), 0 18px 46px rgba(0, 0, 0, 0.42);
+  border-color: rgba(148, 197, 255, 0.6);
+  box-shadow: 0 0 16px rgba(96, 165, 250, 0.2), 0 18px 46px rgba(0, 0, 0, 0.48);
 }
 
 .ball-summary {
@@ -533,12 +533,20 @@ button.glow-white:not(:disabled):hover {
   gap: 10px;
 }
 
+.ball-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
 .ball-name {
-  font-size: 13px;
-  color: rgba(241, 245, 249, 0.9);
-  letter-spacing: 0.2px;
+  font-size: 12px;
+  color: rgba(226, 232, 240, 0.9);
+  letter-spacing: 1.2px;
   font-family: var(--font-heading);
   font-weight: 700;
+  text-transform: uppercase;
 }
 
 .ball-details {
@@ -547,7 +555,115 @@ button.glow-white:not(:disabled):hover {
   gap: 10px;
 }
 
+.ball-upgrades {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.ball-upgrades .tooltip-wrap {
+  display: block;
+}
+
+.ball-upgrades .tooltip-wrap > .ball-upgrade-row {
+  width: 100%;
+}
+
+.ball-upgrade-row {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 54px;
+  height: auto;
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  background: rgba(8, 15, 28, 0.82);
+  text-align: left;
+  font-size: 12px;
+  line-height: 1.2;
+  box-shadow: inset 0 0 12px rgba(37, 99, 235, 0.08);
+}
+
+.ball-upgrade-row:not(:disabled) {
+  box-shadow:
+    inset 0 0 12px rgba(37, 99, 235, 0.08),
+    0 10px 18px rgba(0, 0, 0, 0.35);
+}
+
+.ball-upgrade-row:hover:not(:disabled) {
+  border-color: rgba(125, 211, 252, 0.6);
+  background: rgba(10, 18, 32, 0.95);
+  box-shadow:
+    0 0 12px rgba(59, 130, 246, 0.2),
+    inset 0 0 14px rgba(59, 130, 246, 0.2);
+}
+
+.ball-upgrade-row:disabled {
+  opacity: 0.55;
+  box-shadow: none;
+  cursor: not-allowed;
+}
+
+.ball-upgrade-main {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.ball-upgrade-title {
+  color: rgba(241, 245, 249, 0.9);
+  font-weight: 600;
+}
+
+.ball-upgrade-cost {
+  color: rgba(148, 163, 184, 0.85);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.1px;
+}
+
+.ball-upgrade-meta {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 6px;
+}
+
+.ball-upgrade-level {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: rgba(125, 211, 252, 0.95);
+  letter-spacing: 0.4px;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.ball-upgrade-bar {
+  width: clamp(50px, 18vw, 90px);
+  height: 4px;
+  background: rgba(148, 163, 184, 0.2);
+  border-radius: 999px;
+  overflow: hidden;
+}
+
+.ball-upgrade-fill {
+  display: block;
+  height: 100%;
+  width: 0%;
+  background: linear-gradient(90deg, rgba(56, 189, 248, 0.9), rgba(96, 165, 250, 0.95));
+  box-shadow: 0 0 10px rgba(96, 165, 250, 0.45);
+  transition: width 0.2s ease;
+}
+
 .ball-card.card-collapsed .ball-details {
+  display: none;
+}
+
+.ball-card.card-collapsed .ball-upgrades,
+.ball-card.card-collapsed .ball-stats {
   display: none;
 }
 
@@ -714,10 +830,13 @@ button.glow-white:not(:disabled):hover {
 
 .ball-stats {
   display: grid;
-  gap: 4px;
-  font-size: 12px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 4px 12px;
+  font-size: 11px;
   color: var(--muted);
   font-variant-numeric: tabular-nums;
+  border-top: 1px solid rgba(148, 163, 184, 0.12);
+  padding-top: 8px;
 }
 
 #game-canvas {

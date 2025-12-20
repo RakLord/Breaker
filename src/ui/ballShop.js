@@ -38,64 +38,118 @@ export function ensureBallCard(ctx, typeId) {
   const rangeRow =
     type.id === "splash"
       ? `
-        <div class="upgrade-row">
-          <div class="upgrade-level">Lv <span data-role="rng-lvl">1</span></div>
-          <button type="button" data-action="rng-up" data-tooltip-key="ball-range"><span class="btn-label">Range</span> <span class="btn-cost" data-role="rng-cost">(0)</span></button>
-        </div>
+        <button type="button" data-action="rng-up" data-tooltip-key="ball-range" class="ball-upgrade-row">
+          <div class="ball-upgrade-main">
+            <div class="ball-upgrade-title">Range</div>
+            <div class="ball-upgrade-cost">Cost: <span data-role="rng-cost">0</span></div>
+          </div>
+          <div class="ball-upgrade-meta">
+            <div class="ball-upgrade-level">LV <span data-role="rng-lvl">0</span><span class="ball-upgrade-max" data-role="rng-max"></span></div>
+            <div class="ball-upgrade-bar"><span class="ball-upgrade-fill" data-role="rng-progress"></span></div>
+          </div>
+        </button>
       `
       : "";
   const sizeRow =
     type.id === "heavy"
       ? `
-        <div class="upgrade-row">
-          <div class="upgrade-level">Lv <span data-role="size-lvl">1</span></div>
-          <button type="button" data-action="size-up" data-tooltip-key="ball-size"><span class="btn-label">Size</span> <span class="btn-cost" data-role="size-cost">(0)</span></button>
-        </div>
+        <button type="button" data-action="size-up" data-tooltip-key="ball-size" class="ball-upgrade-row">
+          <div class="ball-upgrade-main">
+            <div class="ball-upgrade-title">Size</div>
+            <div class="ball-upgrade-cost">Cost: <span data-role="size-cost">0</span></div>
+          </div>
+          <div class="ball-upgrade-meta">
+            <div class="ball-upgrade-level">LV <span data-role="size-lvl">0</span><span class="ball-upgrade-max" data-role="size-max"></span></div>
+            <div class="ball-upgrade-bar"><span class="ball-upgrade-fill" data-role="size-progress"></span></div>
+          </div>
+        </button>
       `
       : "";
 
   card.innerHTML = `
-      <div class="ball-summary">
+      <div class="ball-card-header">
         <div class="ball-name">${type.name}</div>
-        <button type="button" data-action="buy"><span class="btn-label">Buy</span> <span class="btn-cost" data-role="buy-cost">(0)</span></button>
+        <button type="button" class="ball-card-toggle" data-action="toggle" aria-label="Toggle card"></button>
       </div>
 
-      <div class="ball-details">
-        <div class="ball-count">Count: <span data-role="count">0</span>/<span data-role="cap">0</span></div>
-
-        <div class="ball-actions">
-          <div class="upgrade-row">
-            <div class="upgrade-level">Lv <span data-role="dmg-lvl">1</span></div>
-            <button type="button" data-action="dmg-up" data-tooltip-key="ball-damage"><span class="btn-label">Damage</span> <span class="btn-cost" data-role="dmg-cost">(0)</span></button>
+      <div class="ball-upgrades">
+        <button type="button" data-action="buy" class="ball-upgrade-row">
+          <div class="ball-upgrade-main">
+            <div class="ball-upgrade-title">Buy</div>
+            <div class="ball-upgrade-cost">Cost: <span data-role="buy-cost">0</span></div>
           </div>
-          <div class="upgrade-row">
-            <div class="upgrade-level">Lv <span data-role="spd-lvl">1</span></div>
-            <button type="button" data-action="spd-up" data-tooltip-key="ball-speed"><span class="btn-label">Speed</span> <span class="btn-cost" data-role="spd-cost">(0)</span></button>
+          <div class="ball-upgrade-meta">
+            <div class="ball-upgrade-level"><span data-role="count">0</span><span data-role="cap-sep">/</span><span data-role="cap">0</span></div>
+            <div class="ball-upgrade-bar"><span class="ball-upgrade-fill" data-role="buy-progress"></span></div>
           </div>
-          ${sizeRow}
-          ${rangeRow}
-          <div class="upgrade-row hidden" data-upgrade="piece">
-            <div class="upgrade-level">Lv <span data-role="pc-lvl">1</span></div>
-            <button type="button" data-action="pc-up" data-tooltip-key="ball-propagation"><span class="btn-label">Propagation</span> <span class="btn-cost" data-role="pc-cost">(0)</span></button>
+        </button>
+        <button type="button" data-action="dmg-up" data-tooltip-key="ball-damage" class="ball-upgrade-row">
+          <div class="ball-upgrade-main">
+            <div class="ball-upgrade-title">Damage</div>
+            <div class="ball-upgrade-cost">Cost: <span data-role="dmg-cost">0</span></div>
           </div>
-          <div class="upgrade-row hidden" data-upgrade="crit">
-            <div class="upgrade-level">Lv <span data-role="crit-lvl">1</span></div>
-            <button type="button" data-action="crit-up" data-tooltip-key="ball-crit"><span class="btn-label">Crit</span> <span class="btn-cost" data-role="crit-cost">(0)</span></button>
+          <div class="ball-upgrade-meta">
+            <div class="ball-upgrade-level">LV <span data-role="dmg-lvl">0</span><span class="ball-upgrade-max" data-role="dmg-max"></span></div>
+            <div class="ball-upgrade-bar"><span class="ball-upgrade-fill" data-role="dmg-progress"></span></div>
           </div>
-          <div class="upgrade-row hidden" data-upgrade="exec">
-            <div class="upgrade-level">Lv <span data-role="exec-lvl">1</span></div>
-            <button type="button" data-action="exec-up" data-tooltip-key="ball-exec"><span class="btn-label">Execute</span> <span class="btn-cost" data-role="exec-cost">(0)</span></button>
+        </button>
+        <button type="button" data-action="spd-up" data-tooltip-key="ball-speed" class="ball-upgrade-row">
+          <div class="ball-upgrade-main">
+            <div class="ball-upgrade-title">Speed</div>
+            <div class="ball-upgrade-cost">Cost: <span data-role="spd-cost">0</span></div>
           </div>
+          <div class="ball-upgrade-meta">
+            <div class="ball-upgrade-level">LV <span data-role="spd-lvl">0</span><span class="ball-upgrade-max" data-role="spd-max"></span></div>
+            <div class="ball-upgrade-bar"><span class="ball-upgrade-fill" data-role="spd-progress"></span></div>
+          </div>
+        </button>
+        ${sizeRow}
+        ${rangeRow}
+        <div class="ball-upgrade-slot hidden" data-upgrade="piece">
+          <button type="button" data-action="pc-up" data-tooltip-key="ball-propagation" class="ball-upgrade-row">
+            <div class="ball-upgrade-main">
+              <div class="ball-upgrade-title">Propagation</div>
+              <div class="ball-upgrade-cost">Cost: <span data-role="pc-cost">0</span></div>
+            </div>
+            <div class="ball-upgrade-meta">
+              <div class="ball-upgrade-level">LV <span data-role="pc-lvl">0</span><span class="ball-upgrade-max" data-role="pc-max"></span></div>
+              <div class="ball-upgrade-bar"><span class="ball-upgrade-fill" data-role="pc-progress"></span></div>
+            </div>
+          </button>
         </div>
-
-        <div class="ball-stats">
-          <div>Damage: <span data-role="damage">0</span></div>
-          <div>Speed: <span data-role="speed">x1.00</span></div>
-          <div>DPS: <span data-role="dps">0.00</span></div>
-          <div class="hidden" data-role="pieces-row">Propagation: <span data-role="pieces">1</span></div>
-          <div class="hidden" data-role="crit-row">Crit: <span data-role="crit">0%</span></div>
-          <div class="hidden" data-role="exec-row">Execute: <span data-role="exec">0%</span></div>
+        <div class="ball-upgrade-slot hidden" data-upgrade="crit">
+          <button type="button" data-action="crit-up" data-tooltip-key="ball-crit" class="ball-upgrade-row">
+            <div class="ball-upgrade-main">
+              <div class="ball-upgrade-title">Crit</div>
+              <div class="ball-upgrade-cost">Cost: <span data-role="crit-cost">0</span></div>
+            </div>
+            <div class="ball-upgrade-meta">
+              <div class="ball-upgrade-level">LV <span data-role="crit-lvl">0</span><span class="ball-upgrade-max" data-role="crit-max"></span></div>
+              <div class="ball-upgrade-bar"><span class="ball-upgrade-fill" data-role="crit-progress"></span></div>
+            </div>
+          </button>
         </div>
+        <div class="ball-upgrade-slot hidden" data-upgrade="exec">
+          <button type="button" data-action="exec-up" data-tooltip-key="ball-exec" class="ball-upgrade-row">
+            <div class="ball-upgrade-main">
+              <div class="ball-upgrade-title">Execute</div>
+              <div class="ball-upgrade-cost">Cost: <span data-role="exec-cost">0</span></div>
+            </div>
+            <div class="ball-upgrade-meta">
+              <div class="ball-upgrade-level">LV <span data-role="exec-lvl">0</span><span class="ball-upgrade-max" data-role="exec-max"></span></div>
+              <div class="ball-upgrade-bar"><span class="ball-upgrade-fill" data-role="exec-progress"></span></div>
+            </div>
+          </button>
+        </div>
+      </div>
+
+      <div class="ball-stats">
+        <div>Damage: <span data-role="damage">0</span></div>
+        <div>Speed: <span data-role="speed">x1.00</span></div>
+        <div>DPS: <span data-role="dps">0.00</span></div>
+        <div class="hidden" data-role="pieces-row">Propagation: <span data-role="pieces">1</span></div>
+        <div class="hidden" data-role="crit-row">Crit: <span data-role="crit">0%</span></div>
+        <div class="hidden" data-role="exec-row">Execute: <span data-role="exec">0%</span></div>
       </div>
     `;
 
@@ -108,14 +162,24 @@ export function ensureBallCard(ctx, typeId) {
 export function initBallShopUI(ctx) {
   if (!ctx.dom.ballListEl) return;
   ctx.dom.ballListEl.addEventListener("click", (e) => {
-    const btn = e.target.closest("button[data-action]");
-    if (!btn) return;
     const card = btn.closest(".ball-card");
     const typeId = card?.dataset?.type;
     if (!typeId) return;
 
+    const btn = e.target.closest("button[data-action]");
+    if (!btn) {
+      if (card.classList.contains("card-minimized") && e.target.closest(".ball-card-header")) {
+        card.classList.remove("card-minimized");
+      }
+      return;
+    }
+
     const player = ctx.getPlayer();
     const action = btn.dataset.action;
+    if (action === "toggle") {
+      card.classList.toggle("card-minimized");
+      return;
+    }
     if (action === "buy") {
       ctx.spawnBallAt(ctx.world.width * 0.5, ctx.world.height * 0.85, typeId);
       return;
@@ -211,6 +275,19 @@ export function updateBallShopCards(ctx) {
   const pointsNow = getPoints(player);
   const revealThreshold = D(0.75);
   const shouldReveal = (cost) => pointsNow.gte(cost.mul(revealThreshold));
+  const getAffordRatio = (cost) => {
+    if (!cost || typeof cost.lte !== "function") return 0;
+    if (cost.lte(0)) return 1;
+    if (pointsNow.gte(cost)) return 1;
+    const raw = pointsNow.div(cost).toNumber();
+    return Number.isFinite(raw) ? clamp(raw, 0, 1) : 0;
+  };
+  const setProgress = (card, role, ratio) => {
+    const el = card.querySelector(`[data-role="${role}"]`);
+    if (!el) return;
+    const clamped = clamp(Number.isFinite(ratio) ? ratio : 0, 0, 1);
+    el.style.width = `${(clamped * 100).toFixed(1)}%`;
+  };
 
   const countsByType = {};
   for (const ball of ctx.game.balls) {
@@ -244,10 +321,13 @@ export function updateBallShopCards(ctx) {
     const unlocked = count > 0 || (typeId === "heavy" && ctx.getStarUpgradeOwned("heavyBall"));
     card.classList.toggle("card-collapsed", !unlocked && !shouldReveal(buyCost));
 
+    const atCap = cap > 0 && count >= cap;
     const countEl = card.querySelector('[data-role="count"]');
-    if (countEl) countEl.textContent = String(count);
+    if (countEl) countEl.textContent = atCap ? "MAX" : String(count);
     const capEl = card.querySelector('[data-role="cap"]');
-    if (capEl) capEl.textContent = String(cap);
+    if (capEl) capEl.textContent = atCap ? "" : String(cap);
+    const capSepEl = card.querySelector('[data-role="cap-sep"]');
+    if (capSepEl) capSepEl.classList.toggle("hidden", atCap);
     const dmgEl = card.querySelector('[data-role="damage"]');
     if (dmgEl) dmgEl.textContent = (getBallDamageValue(player, typeId, baseDamage) * starDamageMult).toFixed(2);
     const spdEl = card.querySelector('[data-role="speed"]');
@@ -273,47 +353,60 @@ export function updateBallShopCards(ctx) {
 
     const buyBtn = card.querySelector('button[data-action="buy"]');
     if (buyBtn) {
-      const atCap = cap > 0 && count >= cap;
       buyBtn.disabled = atCap || !canAfford(player, buyCost);
       const costEl = buyBtn.querySelector('[data-role="buy-cost"]');
-      if (costEl) costEl.textContent = atCap ? "(MAX)" : `(${formatInt(buyCost)})`;
+      if (costEl) costEl.textContent = atCap ? "MAX" : formatInt(buyCost);
+      setProgress(card, "buy-progress", atCap ? 1 : getAffordRatio(buyCost));
     }
     const dmgBtn = card.querySelector('button[data-action="dmg-up"]');
     if (dmgBtn) {
       dmgBtn.disabled = !canAfford(player, dmgCost);
       const lvlEl = card.querySelector('[data-role="dmg-lvl"]');
-      if (lvlEl) lvlEl.textContent = String(typeState.damageLevel + 1);
+      if (lvlEl) lvlEl.textContent = String(typeState.damageLevel);
+      const maxEl = card.querySelector('[data-role="dmg-max"]');
+      if (maxEl) maxEl.textContent = "";
       const costEl = dmgBtn.querySelector('[data-role="dmg-cost"]');
-      if (costEl) costEl.textContent = `(${formatInt(dmgCost)})`;
+      if (costEl) costEl.textContent = formatInt(dmgCost);
+      setProgress(card, "dmg-progress", getAffordRatio(dmgCost));
     }
     const spdBtn = card.querySelector('button[data-action="spd-up"]');
     if (spdBtn) {
       spdBtn.disabled = !canAfford(player, spdCost);
       const lvlEl = card.querySelector('[data-role="spd-lvl"]');
-      if (lvlEl) lvlEl.textContent = String(typeState.speedLevel + 1);
+      if (lvlEl) lvlEl.textContent = String(typeState.speedLevel);
+      const maxEl = card.querySelector('[data-role="spd-max"]');
+      if (maxEl) maxEl.textContent = "";
       const costEl = spdBtn.querySelector('[data-role="spd-cost"]');
-      if (costEl) costEl.textContent = `(${formatInt(spdCost)})`;
+      if (costEl) costEl.textContent = formatInt(spdCost);
+      setProgress(card, "spd-progress", getAffordRatio(spdCost));
     }
     if (typeId === "heavy") {
       const sizeBtn = card.querySelector('button[data-action="size-up"]');
       if (sizeBtn) {
         const cap = 10;
-        sizeBtn.disabled = typeState.sizeLevel >= cap || !canAfford(player, sizeCost);
+        const atCap = typeState.sizeLevel >= cap;
+        sizeBtn.disabled = atCap || !canAfford(player, sizeCost);
         const lvlEl = card.querySelector('[data-role="size-lvl"]');
-        if (lvlEl) lvlEl.textContent = typeState.sizeLevel >= cap ? "MAX" : String(typeState.sizeLevel + 1);
+        if (lvlEl) lvlEl.textContent = String(typeState.sizeLevel);
+        const maxEl = card.querySelector('[data-role="size-max"]');
+        if (maxEl) maxEl.textContent = `/${cap}`;
         const costEl = sizeBtn.querySelector('[data-role="size-cost"]');
-        if (costEl) costEl.textContent = typeState.sizeLevel >= cap ? "(MAX)" : `(${formatInt(sizeCost)})`;
+        if (costEl) costEl.textContent = atCap ? "MAX" : formatInt(sizeCost);
+        setProgress(card, "size-progress", atCap ? 1 : getAffordRatio(sizeCost));
       }
     }
 
     if (typeId === "splash") {
       const capRange = getSplashRangeCap();
       const lvlEl = card.querySelector('[data-role="rng-lvl"]');
-      if (lvlEl) lvlEl.textContent = String(typeState.rangeLevel + 1);
+      if (lvlEl) lvlEl.textContent = String(typeState.rangeLevel);
+      const maxEl = card.querySelector('[data-role="rng-max"]');
+      if (maxEl) maxEl.textContent = `/${capRange}`;
 
       const cost = getSplashRangeUpgradeCost(player);
       const costEl = card.querySelector('[data-role="rng-cost"]');
-      if (costEl) costEl.textContent = `(${formatInt(cost)})`;
+      if (costEl) costEl.textContent = typeState.rangeLevel >= capRange ? "MAX" : formatInt(cost);
+      setProgress(card, "rng-progress", typeState.rangeLevel >= capRange ? 1 : getAffordRatio(cost));
 
       const btn = card.querySelector('button[data-action="rng-up"]');
       if (btn) btn.disabled = typeState.rangeLevel >= capRange || !canAfford(player, cost);
@@ -324,9 +417,12 @@ export function updateBallShopCards(ctx) {
       const atCap = typeState.pieceLevel >= capLevel;
       const cost = getBallPieceCountUpgradeCost(player, typeId);
       const lvlEl = card.querySelector('[data-role="pc-lvl"]');
-      if (lvlEl) lvlEl.textContent = atCap ? "MAX" : String(typeState.pieceLevel + 1);
+      if (lvlEl) lvlEl.textContent = String(typeState.pieceLevel);
+      const maxEl = card.querySelector('[data-role="pc-max"]');
+      if (maxEl) maxEl.textContent = `/${capLevel}`;
       const costEl = card.querySelector('[data-role="pc-cost"]');
-      if (costEl) costEl.textContent = atCap ? "(MAX)" : `(${formatInt(cost)})`;
+      if (costEl) costEl.textContent = atCap ? "MAX" : formatInt(cost);
+      setProgress(card, "pc-progress", atCap ? 1 : getAffordRatio(cost));
       const btn = card.querySelector('button[data-action="pc-up"]');
       if (btn) btn.disabled = atCap || !canAfford(player, cost);
     }
@@ -334,9 +430,12 @@ export function updateBallShopCards(ctx) {
     if (critUnlocked) {
       const cost = getBallCritUpgradeCost(player, typeId);
       const lvlEl = card.querySelector('[data-role="crit-lvl"]');
-      if (lvlEl) lvlEl.textContent = String(typeState.critLevel + 1);
+      if (lvlEl) lvlEl.textContent = String(typeState.critLevel);
+      const maxEl = card.querySelector('[data-role="crit-max"]');
+      if (maxEl) maxEl.textContent = "";
       const costEl = card.querySelector('[data-role="crit-cost"]');
-      if (costEl) costEl.textContent = `(${formatInt(cost)})`;
+      if (costEl) costEl.textContent = formatInt(cost);
+      setProgress(card, "crit-progress", getAffordRatio(cost));
       const btn = card.querySelector('button[data-action="crit-up"]');
       if (btn) btn.disabled = !canAfford(player, cost);
     }
@@ -344,9 +443,12 @@ export function updateBallShopCards(ctx) {
     if (execUnlocked) {
       const cost = getBallExecutionUpgradeCost(player, typeId);
       const lvlEl = card.querySelector('[data-role="exec-lvl"]');
-      if (lvlEl) lvlEl.textContent = String(typeState.executionLevel + 1);
+      if (lvlEl) lvlEl.textContent = String(typeState.executionLevel);
+      const maxEl = card.querySelector('[data-role="exec-max"]');
+      if (maxEl) maxEl.textContent = "";
       const costEl = card.querySelector('[data-role="exec-cost"]');
-      if (costEl) costEl.textContent = `(${formatInt(cost)})`;
+      if (costEl) costEl.textContent = formatInt(cost);
+      setProgress(card, "exec-progress", getAffordRatio(cost));
       const btn = card.querySelector('button[data-action="exec-up"]');
       if (btn) btn.disabled = !canAfford(player, cost);
     }
