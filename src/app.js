@@ -11,54 +11,73 @@ import {
   createDefaultPlayer,
   ensureClearsUpgrades,
   ensureGenerationSettings,
-  getDensityUpgradeCost,
-  getDensityUpgradeLevel,
-  getBallBuyCost,
-  getBallCap,
   ensureBallTypeState,
   ensureCursorState,
-  getBallDamageValue,
   getClears,
+  getDensityUpgradeCost,
+  getDensityUpgradeLevel,
   getGridSizeUpgradeCost,
   getGridSizeUpgradeLevel,
   getBrickHpUpgradeCost,
   getBrickHpEffectLevel,
   getBrickHpUpgradeLevel,
   getPoints,
-  getBallSpeedMultiplier,
   loadPlayerFromStorage,
   normalizePlayer,
   savePlayerToStorage,
   trySpendClears,
-  trySpendPoints,
 } from "../player.js";
+import { createBallLogic, drawManualBallRay } from "./game/ballLogic.js";
+import { createGridFlow } from "./game/gridFlow.js";
+import { countAliveBlocks } from "./game/level.js";
 import { clamp } from "./game/math.js";
-import { getNoiseThresholdForMaxFill, countAliveBlocks } from "./game/level.js";
-import { updateCanvasView, applyWorldTransform, screenToWorld } from "./game/view.js";
-import { buildPlayerSnapshot, encodeSaveString, decodeSaveString } from "./game/storage.js";
-import { getPieceCountForLevel, getCritChanceForLevel, getExecuteRatioForLevel } from "./game/upgradeMath.js";
-import { getDomRefs } from "./ui/dom.js";
+import { ensureProgress as ensureProgressRaw } from "./game/progress.js";
+import {
+  STAR_BASIC_BALLS_COST,
+  STAR_BOARD_WIPE_CHANCE,
+  STAR_BOARD_WIPE_COST,
+  STAR_BRICK_BOOST_COST,
+  STAR_BRICK_BOOST_MAX,
+  STAR_BUFFER_OVERFLOW_COST,
+  STAR_BUFFER_OVERFLOW_MAX,
+  STAR_BUFFER_OVERFLOW_RATE,
+  STAR_BETTER_FORMULA_COST,
+  STAR_BETTER_FORMULA_MAX,
+  STAR_CLEAR_FIRE_SALE_COST,
+  STAR_CURSOR_SPLASH_COST,
+  STAR_MORE_BOARD_WIPES_COST,
+  STAR_MORE_POINTS_COST,
+  STAR_MORE_POINTS_MAX,
+  STAR_MORE_STARS_COST,
+  STAR_PRESTIGE_LEVEL,
+  STAR_SPECIAL_CAP_COST,
+  STAR_STARBOARD_MULT_COST,
+  STAR_TIME_MULT_COST,
+  buyStarUpgrade as buyStarUpgradeRaw,
+  buyStarUpgradeLevel as buyStarUpgradeLevelRaw,
+  ensureStarsState as ensureStarsStateRaw,
+  getNextStarGainLevel as getNextStarGainLevelRaw,
+  getPieceUpgradeCapLevel as getPieceUpgradeCapLevelRaw,
+  getPointsGainMultiplier as getPointsGainMultiplierRaw,
+  getStarPrestigeGain as getStarPrestigeGainRaw,
+  getStarUpgradeOwned as getStarUpgradeOwnedRaw,
+  canStarPrestige as canStarPrestigeRaw,
+} from "./game/stars.js";
+import { buildPlayerSnapshot, decodeSaveString, encodeSaveString } from "./game/storage.js";
+import { getCritChanceForLevel, getExecuteRatioForLevel, getPieceCountForLevel } from "./game/upgradeMath.js";
+import { applyWorldTransform, screenToWorld, updateCanvasView } from "./game/view.js";
 import { initBallShopUI, updateBallShopCards } from "./ui/ballShop.js";
+import { CHANGELOG_LATEST, createChangelogController, populateChangelog } from "./ui/changelog.js";
+import { getDomRefs } from "./ui/dom.js";
+import { createToastManager } from "./ui/notifications.js";
+import {
+  getBallCardMinimized as getBallCardMinimizedRaw,
+  setBallCardMinimized as setBallCardMinimizedRaw,
+  syncUiStateFromPlayer as syncUiStateFromPlayerRaw,
+  syncUiStateToPlayer as syncUiStateToPlayerRaw,
+} from "./ui/uiState.js";
 import { initTooltips } from "./tooltips.js";
 import "tippy.js/dist/tippy.css";
-
-const CHANGELOG_LATEST = {
-  version: "V0.2.4",
-  items: [
-    "Buffer Overflow star upgrade (Tier 4).",
-    "More Stars star upgrade (Tier 5).",
-    "Board Wipe star upgrade (Tier 4).",
-    "More Board Wipes star upgrade (Tier 5).",
-    "Clear Fire Sale star upgrade (Tier 5).",
-    "Ball DPS tracking (10s window) shown in ball cards.",
-    "DPS Stats star upgrade (Tier 1).",
-    "Starboard Mult star upgrade (Tier 5).",
-    "Manual Splash Ball star upgrade (Tier 2).",
-    "Time Star Mult star upgrade (Tier 3).",
-    "Stars modal shows time spent in current reset.",
-    "Special Ball Cap star upgrade (Tier 3).",
-  ],
-};
 
 export function startApp() {
   const dom = getDomRefs();
@@ -188,34 +207,6 @@ export function startApp() {
     changelogListEl,
   } = dom;
 
-  const STAR_PRESTIGE_LEVEL = 40;
-  const STAR_COLLAPSE_STEP = STAR_PRESTIGE_LEVEL;
-  const STAR_BETTER_FORMULA_MAX = 3;
-  const STAR_BETTER_FORMULA_COST = 10;
-  const STAR_BASIC_BALLS_COST = 5;
-  const STAR_BRICK_BOOST_MAX = 3;
-  const STAR_BRICK_BOOST_COST = 3;
-  const STAR_MORE_POINTS_MAX = 10;
-  const STAR_MORE_POINTS_COST = 5;
-  const STAR_BUFFER_OVERFLOW_MAX = 3;
-  const STAR_BUFFER_OVERFLOW_COST = 10;
-  const STAR_BUFFER_OVERFLOW_RATE = 0.1;
-  const STAR_MORE_STARS_COST = 15;
-  const STAR_MORE_STARS_LOG_BASE = 10;
-  const STAR_MORE_STARS_SCALE = 1;
-  const STAR_MORE_STARS_MIN_MULT = 1;
-  const STAR_BOARD_WIPE_COST = 10;
-  const STAR_BOARD_WIPE_CHANCE = 0.0001;
-  const STAR_MORE_BOARD_WIPES_COST = 15;
-  const STAR_CLEAR_FIRE_SALE_COST = 15;
-  const STAR_STARBOARD_MULT_COST = 15;
-  const STAR_CURSOR_SPLASH_COST = 3;
-  const STAR_TIME_MULT_COST = 5;
-  const STAR_TIME_MULT_MIN_SEC = 60;
-  const STAR_TIME_MULT_MAX_SEC = 60 * 60;
-  const STAR_TIME_MULT_MIN = 1;
-  const STAR_TIME_MULT_MAX = 5;
-  const STAR_SPECIAL_CAP_COST = 5;
   const DPS_WINDOW_MS = 10000;
   const DPS_WINDOW_SECONDS = DPS_WINDOW_MS / 1000;
 
@@ -282,252 +273,32 @@ export function startApp() {
   const ui = {
     ballCards: new Map(),
   };
-
-  function updateGridFromPlayer() {
-    ensureGenerationSettings(player);
-    ensureClearsUpgrades(player);
-
-    const desiredCellSize = player.generation.desiredCellSize;
-    const baseCols = Math.max(4, Math.round(world.width / desiredCellSize));
-    const maxCols = CLEARS_SHOP_CONFIG.gridSize.maxCellsPerAxis;
-    const maxLevel = CLEARS_SHOP_CONFIG.gridSize.maxLevel;
-    const level = player.clearsUpgrades.gridSizeLevel;
-
-    const baseColsClamped = Math.min(baseCols, maxCols);
-    const t = maxLevel > 0 ? clamp(level / maxLevel, 0, 1) : 0;
-    const cols = clamp(Math.round(baseColsClamped + (maxCols - baseColsClamped) * t), 4, maxCols);
-
-    const cellSize = world.width / cols;
-    grid.cellSize = cellSize;
-    grid.resize(cols, cols);
-    grid.originX = 0;
-    grid.originY = 0;
-  }
-
-  function getPieceUpgradeCapLevel() {
-    ensureStarsState();
-    const bonus = Math.max(0, (player.starUpgrades?.pieceCap ?? 0) | 0);
-    return clamp(1 + bonus, 1, 3);
-  }
-
-  function applyUpgradesToAllBalls() {
-    const speedMultByType = {};
-    const splashRangeByType = {};
-    const pieceCountByType = {};
-    const critChanceByType = {};
-    const executeRatioByType = {};
-    const sizeBonusByType = {};
-
-    const pieceUnlocked = getStarUpgradeOwned("pieceCount");
-    const pieceCapLevel = getPieceUpgradeCapLevel();
-    const critUnlocked = getStarUpgradeOwned("criticalHits");
-    const execUnlocked = getStarUpgradeOwned("execution");
-    const starDamageMult = getStarUpgradeOwned("damageMulti") ? 2 : 1;
-
-    for (const typeId of Object.keys(BALL_TYPES)) {
-      const typeState = ensureBallTypeState(player, typeId);
-      speedMultByType[typeId] = getBallSpeedMultiplier(player, typeId);
-      pieceCountByType[typeId] = pieceUnlocked ? getPieceCountForLevel(clamp(typeState.pieceLevel, 0, pieceCapLevel)) : 1;
-      critChanceByType[typeId] = critUnlocked ? getCritChanceForLevel(typeState.critLevel) : 0;
-      executeRatioByType[typeId] = execUnlocked ? getExecuteRatioForLevel(typeState.executionLevel) : 0;
-      if (typeId === "splash") {
-        const baseR = (BALL_TYPES.splash?.splashRadiusCells ?? 1) | 0;
-        const bonus = typeState.rangeLevel | 0;
-        splashRangeByType[typeId] = baseR + Math.max(0, bonus);
-      }
-      if (typeId === "heavy") {
-        sizeBonusByType[typeId] = Math.max(0, typeState.sizeLevel | 0);
-      }
-    }
-
-    for (const ball of game.balls) {
-      const typeId = ball.typeId;
-      const speedMult = speedMultByType[typeId] ?? 1;
-      ball.pieceCount = pieceCountByType[typeId] ?? 1;
-      ball.critChance = critChanceByType[typeId] ?? 0;
-      ball.critMultiplier = 2;
-      ball.executeRatio = executeRatioByType[typeId] ?? 0;
-
-      if (!ball.data || typeof ball.data !== "object") ball.data = {};
-
-      if (!Number.isFinite(ball.data.baseSpeed)) {
-        const currentSpeed = Math.hypot(ball.vx, ball.vy) || 0;
-        ball.data.baseSpeed = speedMult > 0 ? currentSpeed / speedMult : currentSpeed;
-      }
-      if (!Number.isFinite(ball.data.baseDamage)) {
-        const baseDamage = Number.isFinite(ball.type?.baseDamage) ? ball.type.baseDamage : 1;
-        ball.data.baseDamage = baseDamage;
-      }
-
-      const desiredDamage = getBallDamageValue(player, typeId, ball.data.baseDamage) * starDamageMult;
-      if (Number.isFinite(desiredDamage) && ball.damage !== desiredDamage) ball.damage = desiredDamage;
-
-      const normalSpeedBonus =
-        typeId === "normal" && getStarUpgradeOwned("betterBasicBalls") ? 5 : 0;
-      const desiredSpeed = (ball.data.baseSpeed + normalSpeedBonus) * speedMult;
-      const currentSpeed = Math.hypot(ball.vx, ball.vy) || 0;
-      if (Number.isFinite(desiredSpeed) && desiredSpeed > 0 && currentSpeed > 0) {
-        const s = desiredSpeed / currentSpeed;
-        if (Number.isFinite(s) && Math.abs(s - 1) > 1e-6) {
-          ball.vx *= s;
-          ball.vy *= s;
-        }
-      }
-
-      if (typeId === "splash") {
-        ball.splashRadiusCells = splashRangeByType.splash ?? ball.splashRadiusCells;
-      }
-      if (typeId === "heavy") {
-        if (!Number.isFinite(ball.data.baseRadius)) ball.data.baseRadius = BALL_TYPES.heavy?.radius ?? ball.radius;
-        const desiredRadius = Math.max(1, (ball.data.baseRadius ?? 1) + (sizeBonusByType.heavy ?? 0));
-        if (Number.isFinite(desiredRadius) && ball.radius !== desiredRadius) ball.radius = desiredRadius;
-      }
-    }
-  }
+  const getPlayer = () => player;
+  const { pushToast } = createToastManager(toastContainer);
+  const { openChangelogModal, scheduleChangelogClose } = createChangelogController({
+    appVersionEl,
+    changelogModal,
+  });
+  const { updateGridFromPlayer, regenerate, tryRestoreGridFromPlayerSave, getMaxDensityLevel } = createGridFlow({
+    getPlayer,
+    grid,
+    world,
+    state,
+  });
+  const { applyUpgradesToAllBalls, ensureCursorBall, ensureHeavyBall, spawnBallAt } = createBallLogic({
+    getPlayer,
+    game,
+    world,
+    setMessage,
+  });
 
   function setMessage(msg, seconds = 1.6) {
     state.uiMessage = msg;
     state.uiMessageUntil = performance.now() + seconds * 1000;
   }
 
-  function dismissToast(toast) {
-    if (!toast) return;
-    if (toast._dismissTimer) {
-      clearTimeout(toast._dismissTimer);
-      toast._dismissTimer = null;
-    }
-    toast.remove();
-  }
 
-  function pushToast({ title, message, glowColor = null, timeoutMs = null } = {}) {
-    if (!toastContainer) return null;
-    const safeTitle = title || "Notice";
-    const safeMessage = message || "";
 
-    const toast = document.createElement("div");
-    toast.className = "toast";
-    if (glowColor) {
-      toast.classList.add("toast--glow");
-      toast.style.setProperty("--toast-glow", glowColor);
-    }
-
-    const header = document.createElement("div");
-    header.className = "toast-header";
-
-    const titleEl = document.createElement("div");
-    titleEl.className = "toast-title";
-    titleEl.textContent = safeTitle;
-
-    const closeBtn = document.createElement("button");
-    closeBtn.type = "button";
-    closeBtn.className = "toast-close";
-    closeBtn.setAttribute("aria-label", "Dismiss notification");
-    closeBtn.textContent = "×";
-    closeBtn.addEventListener("click", () => dismissToast(toast));
-
-    header.appendChild(titleEl);
-    header.appendChild(closeBtn);
-
-    const body = document.createElement("div");
-    body.className = "toast-body";
-    body.textContent = safeMessage;
-
-    toast.appendChild(header);
-    toast.appendChild(body);
-    toastContainer.appendChild(toast);
-
-    if (Number.isFinite(timeoutMs) && timeoutMs > 0) {
-      toast._dismissTimer = setTimeout(() => dismissToast(toast), timeoutMs);
-    }
-
-    return toast;
-  }
-
-  function drawManualBallRay(ctx, ball) {
-    if (!ball?.data?.aimAtCursorOnWall) return;
-    if (!world?.cursor?.active) return;
-    const speed = Math.hypot(ball.vx, ball.vy);
-    if (!Number.isFinite(speed) || speed <= 0.01) return;
-
-    const maxDistance = world.width * 1.5;
-    const maxSegments = 8;
-    const radius = Number.isFinite(ball.radius) ? ball.radius : 0;
-    const stepLen = Math.max(2, radius * 0.75);
-    const left = radius;
-    const right = world.width - radius;
-    const top = radius;
-    const bottom = world.height - radius;
-
-    let px = ball.x;
-    let py = ball.y;
-    let vx = ball.vx;
-    let vy = ball.vy;
-    let remaining = maxDistance;
-
-    ctx.save();
-    ctx.beginPath();
-    ctx.moveTo(px, py);
-
-    for (let i = 0; i < maxSegments && remaining > 0; i++) {
-      const currentSpeed = Math.hypot(vx, vy);
-      if (!Number.isFinite(currentSpeed) || currentSpeed <= 0.01) break;
-      const ux = vx / currentSpeed;
-      const uy = vy / currentSpeed;
-
-      const tx = vx > 0 ? (right - px) / vx : vx < 0 ? (left - px) / vx : Infinity;
-      const ty = vy > 0 ? (bottom - py) / vy : vy < 0 ? (top - py) / vy : Infinity;
-      const tHit = Math.min(tx, ty);
-      if (!Number.isFinite(tHit) || tHit <= 0) break;
-
-      const segmentDistance = Math.min(currentSpeed * tHit, remaining);
-      const steps = Math.max(1, Math.ceil(segmentDistance / stepLen));
-      let traveled = 0;
-      let hitBlock = false;
-
-      for (let s = 0; s < steps; s++) {
-        const stepDist = Math.min(stepLen, segmentDistance - traveled);
-        traveled += stepDist;
-        const sx = px + ux * traveled;
-        const sy = py + uy * traveled;
-        if (grid.findCircleCollision(sx, sy, radius)) {
-          ctx.lineTo(sx, sy);
-          remaining = 0;
-          hitBlock = true;
-          break;
-        }
-      }
-
-      if (hitBlock) break;
-
-      px += ux * segmentDistance;
-      py += uy * segmentDistance;
-      ctx.lineTo(px, py);
-      remaining -= segmentDistance;
-
-      if (segmentDistance < currentSpeed * tHit - 1e-6) break;
-
-      const hitVertical = Math.abs(tHit - tx) < 1e-6;
-      const hitHorizontal = Math.abs(tHit - ty) < 1e-6;
-      if (hitVertical) vx = -vx;
-      if (hitHorizontal) vy = -vy;
-
-      const cursor = world?.cursor;
-      if (cursor?.active && Number.isFinite(cursor.x) && Number.isFinite(cursor.y)) {
-        const dx = cursor.x - px;
-        const dy = cursor.y - py;
-        const len = Math.hypot(dx, dy);
-        if (len > 1e-6) {
-          vx = (dx / len) * currentSpeed;
-          vy = (dy / len) * currentSpeed;
-        }
-      }
-    }
-
-    ctx.strokeStyle = "rgba(230, 201, 201, 0.03)";
-    ctx.lineWidth = 5.0;
-    ctx.stroke();
-    ctx.restore();
-  }
 
   function maybeShowManualBallToast(aliveBlocks) {
     const tutorials = ensureTutorialState();
@@ -562,42 +333,8 @@ export function startApp() {
     hpOverlayBtn.classList.toggle("is-active", state.showHpOverlay);
   }
 
-  function populateChangelog() {
-    if (appVersionEl) appVersionEl.textContent = CHANGELOG_LATEST.version;
-    if (changelogVersionEl) changelogVersionEl.textContent = CHANGELOG_LATEST.version;
-    if (!changelogListEl) return;
-    changelogListEl.innerHTML = "";
-    for (const item of CHANGELOG_LATEST.items) {
-      const li = document.createElement("li");
-      li.textContent = item;
-      changelogListEl.appendChild(li);
-    }
-  }
 
-  let changelogHideTimer = null;
 
-  function openChangelogModal() {
-    if (!changelogModal) return;
-    if (changelogHideTimer) {
-      clearTimeout(changelogHideTimer);
-      changelogHideTimer = null;
-    }
-    changelogModal.classList.remove("hidden");
-    changelogModal.setAttribute("aria-hidden", "false");
-    if (appVersionEl) appVersionEl.setAttribute("aria-expanded", "true");
-  }
-
-  function closeChangelogModal() {
-    if (!changelogModal) return;
-    changelogModal.classList.add("hidden");
-    changelogModal.setAttribute("aria-hidden", "true");
-    if (appVersionEl) appVersionEl.setAttribute("aria-expanded", "false");
-  }
-
-  function scheduleChangelogClose() {
-    if (changelogHideTimer) clearTimeout(changelogHideTimer);
-    changelogHideTimer = setTimeout(closeChangelogModal, 120);
-  }
 
   function setBallContextType(typeId) {
     state.ballContextType = typeId ?? null;
@@ -632,173 +369,8 @@ export function startApp() {
     return true;
   }
 
-  function ensureProgress() {
-    if (!player.progress || typeof player.progress !== "object") {
-      player.progress = { level: 1, masterSeed: (Math.random() * 2 ** 32) >>> 0 };
-    }
-    player.progress.level = Math.max(1, (player.progress.level ?? 1) | 0);
-    if (!Number.isFinite(player.progress.masterSeed)) {
-      player.progress.masterSeed = (Math.random() * 2 ** 32) >>> 0;
-    } else {
-      player.progress.masterSeed = player.progress.masterSeed >>> 0;
-    }
-  }
-
-  function regenerate({ reseed = false } = {}) {
-    ensureProgress();
-    if (reseed) player.progress.masterSeed = (Math.random() * 2 ** 32) >>> 0;
-
-    const level = player.progress.level;
-    const seed = (player.progress.masterSeed + level) >>> 0;
-
-    updateGridFromPlayer();
-    ensureClearsUpgrades(player);
-    const baseThreshold = player.generation.noiseThreshold;
-    const densityLevel = getDensityUpgradeLevel(player);
-    const step = CLEARS_SHOP_CONFIG.density.thresholdStep;
-    const minThreshold = CLEARS_SHOP_CONFIG.density.minNoiseThreshold;
-    const desiredThreshold = clamp(baseThreshold - densityLevel * step, minThreshold, 1);
-
-    const noiseScale = 0.28;
-    const capThreshold = getNoiseThresholdForMaxFill({
-      cols: grid.cols,
-      rows: grid.rows,
-      seed,
-      noiseScale,
-      maxFillRatio: CLEARS_SHOP_CONFIG.density.maxFillRatio,
-    });
-    const noiseThreshold = Math.max(desiredThreshold, capThreshold);
-    const brickHpLevel = getBrickHpEffectLevel(player);
-    const startHp = Math.max(1, level - brickHpLevel);
-
-    grid.generate({
-      pattern: "noise",
-      seed,
-      noiseScale,
-      noiseThreshold,
-      hpMin: startHp,
-      hpMax: startHp,
-      filledRowsRatio: 1,
-      emptyBorder: 0,
-    });
-
-    state.initialBlocks = countAliveBlocks(grid);
-  }
-
-  function tryRestoreGridFromPlayerSave() {
-    const saved = player?.game?.grid;
-    if (!saved) return false;
-
-    const maxAxis = CLEARS_SHOP_CONFIG.gridSize.maxCellsPerAxis ?? 100;
-    const ok = grid.applyJSONData(saved, { maxCols: maxAxis, maxRows: maxAxis, maxCells: maxAxis * maxAxis });
-    if (!ok) return false;
-
-    const savedInitial = player?.game?.initialBlocks;
-    state.initialBlocks = Math.max(0, (savedInitial ?? 0) | 0);
-    if (state.initialBlocks <= 0) state.initialBlocks = countAliveBlocks(grid);
-    return true;
-  }
-
-  function ensureCursorBall() {
-    const desiredTypeId = getStarUpgradeOwned("cursorSplash") ? "splash" : "normal";
-    const existing = game.balls.find((ball) => ball?.data?.isCursorBall);
-    if (existing) {
-      if (existing.typeId === desiredTypeId) return existing;
-      game.balls = game.balls.filter((ball) => ball !== existing);
-    }
-
-    const type = BALL_TYPES[desiredTypeId] ?? BALL_TYPES.normal;
-    const typeState = ensureBallTypeState(player, type.id);
-    const speedMult = getBallSpeedMultiplier(player, type.id);
-    const starDamageMult = getStarUpgradeOwned("damageMulti") ? 2 : 1;
-    const baseSpeed = 460 + Math.random() * 80;
-    const normalSpeedBonus = type.id === "normal" && getStarUpgradeOwned("betterBasicBalls") ? 5 : 0;
-    const speed = (baseSpeed + normalSpeedBonus) * speedMult;
-    const angle = -Math.PI / 2;
-
-    const ball = Ball.spawn({
-      typeId: type.id,
-      x: world.width * 0.5,
-      y: world.height * 0.85,
-      speed,
-      angleRad: angle,
-      damage: getBallDamageValue(player, type.id, type.baseDamage) * starDamageMult,
-      data: {
-        isCursorBall: true,
-        aimAtCursorOnWall: true,
-        baseSpeed,
-        baseDamage: type.baseDamage,
-      },
-    });
-    if (type.id === "splash") {
-      const baseR = type.splashRadiusCells ?? 1;
-      const bonus = Math.max(0, typeState.rangeLevel | 0);
-      ball.splashRadiusCells = baseR + bonus;
-    }
-    game.balls.push(ball);
-    return ball;
-  }
 
 
-  function ensureHeavyBall() {
-    if (!getStarUpgradeOwned("heavyBall")) return null;
-    const hasHeavy = game.balls.some((ball) => ball.typeId === "heavy" && !ball.data?.isCursorBall);
-    if (hasHeavy) return null;
-    spawnBallAt(world.width * 0.5, world.height * 0.85, "heavy", { free: true });
-    return game.balls.find((ball) => ball.typeId === "heavy" && !ball.data?.isCursorBall) ?? null;
-  }
-
-  function spawnBallAt(x, y, typeId, { free = false } = {}) {
-    const ownedCount = game.balls.reduce(
-      (acc, b) => acc + (b.typeId === typeId && !b.data?.isCursorBall ? 1 : 0),
-      0
-    );
-    const cap = getBallCap(player, typeId);
-    if (!free && cap > 0 && ownedCount >= cap) {
-      setMessage(`${typeId} cap reached (${cap})`);
-      return false;
-    }
-
-    const cost = getBallBuyCost(typeId, ownedCount);
-    if (!free && !trySpendPoints(player, cost)) {
-      setMessage(`Not enough points (need ${formatInt(cost)})`);
-      return false;
-    }
-
-    const type = BALL_TYPES[typeId] ?? BALL_TYPES.normal;
-    const typeState = ensureBallTypeState(player, type.id);
-    const starDamageMult = getStarUpgradeOwned("damageMulti") ? 2 : 1;
-    const speedMult = getBallSpeedMultiplier(player, type.id);
-
-    const angle = (-Math.PI / 2) + (Math.random() * 0.6 - 0.3);
-    let baseSpeed = 460 + Math.random() * 80;
-    if (type.id === "heavy") baseSpeed *= 0.25;
-    const normalSpeedBonus = type.id === "normal" && getStarUpgradeOwned("betterBasicBalls") ? 5 : 0;
-    const speed = (baseSpeed + normalSpeedBonus) * speedMult;
-    let radius = type.radius;
-    let baseRadius = type.radius;
-    if (type.id === "heavy") {
-      const sizeLevel = Math.max(0, ensureBallTypeState(player, type.id).sizeLevel | 0);
-      radius = baseRadius + sizeLevel;
-    }
-    const ball = Ball.spawn({
-      typeId,
-      x,
-      y,
-      speed,
-      angleRad: angle,
-      damage: getBallDamageValue(player, type.id, type.baseDamage) * starDamageMult,
-      radius,
-      data: { baseSpeed, baseDamage: type.baseDamage, baseRadius },
-    });
-    if (type.id === "splash") {
-      const baseR = type.splashRadiusCells ?? 1;
-      const bonus = Math.max(0, typeState.rangeLevel | 0);
-      ball.splashRadiusCells = baseR + bonus;
-    }
-    game.balls.push(ball);
-    return true;
-  }
 
   function savePlayerNow({ silent = false } = {}) {
     const snapshot = buildPlayerSnapshot({ player, game, grid, state });
@@ -929,110 +501,13 @@ export function startApp() {
     return true;
   }
 
-  function ensureStarsState() {
-    if (!Number.isFinite(player.stars)) player.stars = 0;
-    player.stars = Math.max(0, player.stars | 0);
-    if (!player.starUpgrades || typeof player.starUpgrades !== "object") {
-      player.starUpgrades = {
-        pieceCount: false,
-        pieceCap: 0,
-        criticalHits: false,
-        execution: false,
-        normalCap: 0,
-        clearsLogMult: false,
-        damageMulti: false,
-        persistence: false,
-        dpsStats: false,
-        cursorSplash: false,
-        advancedPersistence: false,
-        heavyBall: false,
-        starCollapse: false,
-        ballcountPersist: false,
-        betterFormula: 0,
-        betterBasicBalls: false,
-        brickHpBoost: 0,
-        morePoints: 0,
-        bufferOverflow: 0,
-        boardWipe: false,
-        moreStars: false,
-        moreBoardWipes: false,
-        clearFireSale: false,
-        starboardMultiplier: false,
-        timeStarMult: false,
-        specialCap: false,
-      };
-    }
-    for (const k of [
-      "pieceCount",
-      "criticalHits",
-      "execution",
-      "clearsLogMult",
-      "damageMulti",
-      "persistence",
-      "dpsStats",
-      "cursorSplash",
-      "advancedPersistence",
-      "heavyBall",
-      "starCollapse",
-      "timeStarMult",
-      "specialCap",
-      "ballcountPersist",
-      "boardWipe",
-      "moreBoardWipes",
-      "clearFireSale",
-      "starboardMultiplier",
-      "timeStarMult",
-      "specialCap",
-    ]) {
-      player.starUpgrades[k] = !!player.starUpgrades[k];
-    }
-    player.starUpgrades.betterBasicBalls = !!player.starUpgrades.betterBasicBalls;
-    player.starUpgrades.pieceCap = Math.max(0, Math.min(2, (player.starUpgrades.pieceCap ?? 0) | 0));
-    player.starUpgrades.normalCap = Math.max(0, Math.min(2, (player.starUpgrades.normalCap ?? 0) | 0));
-    player.starUpgrades.betterFormula = Math.max(
-      0,
-      Math.min(STAR_BETTER_FORMULA_MAX, (player.starUpgrades.betterFormula ?? 0) | 0)
-    );
-    player.starUpgrades.brickHpBoost = Math.max(
-      0,
-      Math.min(STAR_BRICK_BOOST_MAX, (player.starUpgrades.brickHpBoost ?? 0) | 0)
-    );
-    player.starUpgrades.morePoints = Math.max(
-      0,
-      Math.min(STAR_MORE_POINTS_MAX, (player.starUpgrades.morePoints ?? 0) | 0)
-    );
-    player.starUpgrades.bufferOverflow = Math.max(
-      0,
-      Math.min(STAR_BUFFER_OVERFLOW_MAX, (player.starUpgrades.bufferOverflow ?? 0) | 0)
-    );
-    player.starUpgrades.boardWipe = !!player.starUpgrades.boardWipe;
-    player.starUpgrades.moreStars = !!player.starUpgrades.moreStars;
-    player.starUpgrades.moreBoardWipes = !!player.starUpgrades.moreBoardWipes;
-    player.starUpgrades.clearFireSale = !!player.starUpgrades.clearFireSale;
-    player.starUpgrades.starboardMultiplier = !!player.starUpgrades.starboardMultiplier;
-    player.starUpgrades.timeStarMult = !!player.starUpgrades.timeStarMult;
-    player.starUpgrades.specialCap = !!player.starUpgrades.specialCap;
-    player.starUpgrades.cursorSplash = !!player.starUpgrades.cursorSplash;
 
-    if (!player.starStats || typeof player.starStats !== "object") {
-      player.starStats = {
-        prestiges: 0,
-        earnedTotal: 0,
-        spentTotal: 0,
-        lastPrestigeLevel: null,
-        lastPrestigeAt: Date.now(),
-      };
-    }
-    player.starStats.prestiges = Math.max(0, (player.starStats.prestiges ?? 0) | 0);
-    player.starStats.earnedTotal = Math.max(0, (player.starStats.earnedTotal ?? 0) | 0);
-    player.starStats.spentTotal = Math.max(0, (player.starStats.spentTotal ?? 0) | 0);
-    player.starStats.lastPrestigeLevel = Number.isFinite(player.starStats.lastPrestigeLevel)
-      ? player.starStats.lastPrestigeLevel
-      : null;
-    player.starStats.lastPrestigeAt = Number.isFinite(player.starStats.lastPrestigeAt)
-      ? player.starStats.lastPrestigeAt
-      : Date.now();
-    player.starStats.earnedTotal = Math.max(player.starStats.earnedTotal, player.stars + player.starStats.spentTotal);
+  function ensureProgress() {
+    return ensureProgressRaw(player);
+  }
+
+  function ensureStarsState() {
+    return ensureStarsStateRaw(player);
   }
 
   function ensureClearsStats() {
@@ -1054,287 +529,52 @@ export function startApp() {
     return player.tutorials;
   }
 
-  function ensureUiState() {
-    if (!player.ui || typeof player.ui !== "object") {
-      player.ui = { ballContextEnabled: false, showHpOverlay: false, ballCardMinimized: {} };
-    }
-    player.ui.ballContextEnabled = !!player.ui.ballContextEnabled;
-    player.ui.showHpOverlay = !!player.ui.showHpOverlay;
-    if (!player.ui.ballCardMinimized || typeof player.ui.ballCardMinimized !== "object") {
-      player.ui.ballCardMinimized = {};
-    }
-    return player.ui;
-  }
-
   function syncUiStateFromPlayer() {
-    const uiState = ensureUiState();
-    state.ballContextEnabled = !!uiState.ballContextEnabled;
-    state.showHpOverlay = !!uiState.showHpOverlay;
-    if (!state.ballContextEnabled) state.ballContextType = null;
+    return syncUiStateFromPlayerRaw(player, state);
   }
 
   function syncUiStateToPlayer() {
-    const uiState = ensureUiState();
-    uiState.ballContextEnabled = !!state.ballContextEnabled;
-    uiState.showHpOverlay = !!state.showHpOverlay;
+    return syncUiStateToPlayerRaw(player, state);
   }
 
   function getBallCardMinimized(typeId) {
-    const uiState = ensureUiState();
-    return !!uiState.ballCardMinimized?.[typeId];
+    return getBallCardMinimizedRaw(player, typeId);
   }
 
   function setBallCardMinimized(typeId, minimized) {
-    const uiState = ensureUiState();
-    uiState.ballCardMinimized[typeId] = !!minimized;
+    return setBallCardMinimizedRaw(player, typeId, minimized);
   }
 
-  function getBetterFormulaLevel() {
-    ensureStarsState();
-    return Math.max(0, Math.min(STAR_BETTER_FORMULA_MAX, (player.starUpgrades?.betterFormula ?? 0) | 0));
-  }
-
-  function getStarGainMultiplier() {
-    const level = getBetterFormulaLevel();
-    if (level <= 0) return 1;
-    const clearsValue = getClears(player);
-    const clearsNumber = Number.isFinite(clearsValue?.toNumber?.()) ? clearsValue.toNumber() : Number(clearsValue);
-    const safeClears = Math.max(1, Number.isFinite(clearsNumber) ? clearsNumber : 1);
-    const rawLog =
-      typeof clearsValue?.log10 === "function"
-        ? clearsValue.log10()
-        : Math.log10(safeClears);
-    const logValue = Number.isFinite(rawLog) ? rawLog : Number(rawLog);
-    const rawMult = (Number.isFinite(logValue) ? logValue : 0) / level;
-    return Math.max(1, rawMult);
-  }
-
-  function getMoreStarsMultiplier() {
-    if (!getStarUpgradeOwned("moreStars")) return 1;
-    const clearsValue = getClears(player);
-    const clearsNumber = Number.isFinite(clearsValue?.toNumber?.()) ? clearsValue.toNumber() : Number(clearsValue);
-    const safeClears = Math.max(1, Number.isFinite(clearsNumber) ? clearsNumber : 1);
-    const rawLog =
-      typeof clearsValue?.log10 === "function"
-        ? clearsValue.log10()
-        : Math.log10(safeClears);
-    const logValue = Number.isFinite(rawLog) ? rawLog : Number(rawLog);
-    const baseLog = Math.log10(STAR_MORE_STARS_LOG_BASE);
-    const normalized = baseLog > 0 ? (Number.isFinite(logValue) ? logValue : 0) / baseLog : 0;
-    const scaled = normalized * STAR_MORE_STARS_SCALE;
-    return Math.max(STAR_MORE_STARS_MIN_MULT, scaled);
-  }
-
-  function getTimeStarMultiplier() {
-    if (!getStarUpgradeOwned("timeStarMult")) return 1;
-    ensureStarsState();
-    const last = player.starStats?.lastPrestigeAt;
-    const lastTime = Number.isFinite(last) ? last : Date.now();
-    const elapsedSec = Math.max(0, (Date.now() - lastTime) / 1000);
-    if (elapsedSec <= STAR_TIME_MULT_MIN_SEC) return STAR_TIME_MULT_MIN;
-    if (elapsedSec >= STAR_TIME_MULT_MAX_SEC) return STAR_TIME_MULT_MAX;
-    const t = (elapsedSec - STAR_TIME_MULT_MIN_SEC) / (STAR_TIME_MULT_MAX_SEC - STAR_TIME_MULT_MIN_SEC);
-    return STAR_TIME_MULT_MIN + t * (STAR_TIME_MULT_MAX - STAR_TIME_MULT_MIN);
-  }
-
-  function getStarboardUpgradeCount() {
-    ensureStarsState();
-    const u = player.starUpgrades ?? {};
-    const bools = [
-      "pieceCount",
-      "criticalHits",
-      "execution",
-      "clearsLogMult",
-      "damageMulti",
-      "persistence",
-      "dpsStats",
-      "cursorSplash",
-      "advancedPersistence",
-      "heavyBall",
-      "starCollapse",
-      "timeStarMult",
-      "ballcountPersist",
-      "betterBasicBalls",
-      "boardWipe",
-      "moreStars",
-      "moreBoardWipes",
-      "clearFireSale",
-      "starboardMultiplier",
-    ];
-    const levels = [
-      "pieceCap",
-      "normalCap",
-      "betterFormula",
-      "brickHpBoost",
-      "morePoints",
-      "bufferOverflow",
-    ];
-    let count = 0;
-    for (const key of bools) if (u[key]) count += 1;
-    for (const key of levels) {
-      const value = Number.isFinite(u[key]) ? Math.max(0, u[key] | 0) : 0;
-      count += value;
-    }
-    return count;
-  }
-
-  function getStarboardMultiplier() {
-    if (!getStarUpgradeOwned("starboardMultiplier")) return 1;
-    return Math.max(1, getStarboardUpgradeCount());
-  }
-
-  function getPointsGainMultiplier() {
-    ensureStarsState();
-    const level = Math.max(0, Math.min(STAR_MORE_POINTS_MAX, (player.starUpgrades?.morePoints ?? 0) | 0));
-    if (level <= 0) return 1;
-    return Math.pow(1.2, level);
-  }
-
-  function getStarCollapseGain(levelRaw) {
-    const level = Math.max(1, Number.isFinite(levelRaw) ? levelRaw : 1);
-    if (level < STAR_PRESTIGE_LEVEL) return 0;
-    const base = level / STAR_COLLAPSE_STEP;
-    const mult = getStarGainMultiplier();
-    return Math.max(1, Math.floor(base * mult));
-  }
-
-  function getStarPrestigeGain() {
-    ensureProgress();
-    const level = player.progress?.level ?? 1;
-    const base = getStarUpgradeOwned("starCollapse") ? getStarCollapseGain(level) : 1;
-    const mult = getMoreStarsMultiplier();
-    const starboardMult = getStarboardMultiplier();
-    const timeMult = getTimeStarMultiplier();
-    return Math.max(1, Math.ceil(base * mult * starboardMult * timeMult));
-  }
-
-  function getNextStarGainLevel(currentGain) {
-    const gain = Math.max(1, currentGain | 0);
-    const mult = getStarGainMultiplier();
-    if (!Number.isFinite(mult) || mult <= 0) return null;
-    const target = gain + 1;
-    const rawLevel = Math.ceil((target / mult) * STAR_COLLAPSE_STEP);
-    return Math.max(STAR_PRESTIGE_LEVEL, rawLevel);
-  }
-
-  function canStarPrestige() {
-    ensureProgress();
-    return (player.progress?.level ?? 1) >= STAR_PRESTIGE_LEVEL;
-  }
-
-  function starPrestigeNow() {
-    ensureStarsState();
-    if (!canStarPrestige()) {
-      setMessage(`Need Level ${STAR_PRESTIGE_LEVEL}`);
-      return false;
-    }
-
-    const gain = getStarPrestigeGain();
-    const ok = window.confirm(
-      `Star Prestige will reset points/clears/balls and all lower-layer upgrades.\n\nYou will gain +${gain} Star${
-        gain === 1 ? "" : "s"
-      }.\n\nContinue?`
-    );
-    if (!ok) return false;
-
-    const keepStars = Math.max(0, (player.stars ?? 0) | 0) + gain;
-    const keepStarUpgrades = { ...(player.starUpgrades ?? {}) };
-    const keepStarStats = { ...(player.starStats ?? {}) };
-    const keepManualBallToastShown = !!player.tutorials?.manualBallToastShown;
-    const keepUiState = player.ui && typeof player.ui === "object" ? { ...player.ui } : null;
-    const keepNormal = getStarUpgradeOwned("persistence");
-    const keepOthers = getStarUpgradeOwned("advancedPersistence");
-    const preservedBallTypes = {};
-    if (keepNormal) {
-      const s = ensureBallTypeState(player, "normal");
-      preservedBallTypes.normal = {
-        damageLevel: s.damageLevel,
-        speedLevel: s.speedLevel,
-        rangeLevel: s.rangeLevel,
-        sizeLevel: s.sizeLevel,
-        pieceLevel: s.pieceLevel,
-        critLevel: s.critLevel,
-        executionLevel: s.executionLevel,
-      };
-    }
-    if (keepOthers) {
-      for (const typeId of Object.keys(BALL_TYPES)) {
-        if (typeId === "normal") continue;
-        const s = ensureBallTypeState(player, typeId);
-        preservedBallTypes[typeId] = {
-          damageLevel: s.damageLevel,
-          speedLevel: s.speedLevel,
-          rangeLevel: s.rangeLevel,
-          sizeLevel: s.sizeLevel,
-          pieceLevel: s.pieceLevel,
-          critLevel: s.critLevel,
-          executionLevel: s.executionLevel,
-        };
-      }
-    }
-    keepStarStats.prestiges = Math.max(0, (keepStarStats.prestiges ?? 0) | 0) + 1;
-    keepStarStats.earnedTotal = Math.max(0, (keepStarStats.earnedTotal ?? 0) | 0) + gain;
-    keepStarStats.lastPrestigeLevel = player.progress?.level ?? null;
-    keepStarStats.lastPrestigeAt = Date.now();
-
-    player = normalizePlayer(createDefaultPlayer());
-    player.stars = keepStars;
-    player.starUpgrades = keepStarUpgrades;
-    player.starStats = keepStarStats;
-    player.ballTypes = preservedBallTypes;
-    ensureTutorialState().manualBallToastShown = keepManualBallToastShown;
-    if (keepUiState) player.ui = keepUiState;
-    syncUiStateFromPlayer();
-    updateBallContextButton();
-    updateHpOverlayButton();
-
-    ensureCursorState(player).level = 0;
-    ensureGenerationSettings(player);
-    ensureClearsUpgrades(player);
-    ensureProgress();
-    player.progress.level = 1;
-    player.progress.masterSeed = (Math.random() * 2 ** 32) >>> 0;
-
-    updateGridFromPlayer();
-    window.player = player;
-
-    game.balls = [];
-    regenerate();
-    spawnBallAt(world.width * 0.5, world.height * 0.85, "normal", { free: true });
-    ensureCursorBall();
-    ensureHeavyBall();
-    applyUpgradesToAllBalls();
-
-    setMessage(`Gained +${gain} Star${gain === 1 ? "" : "s"}`);
-    savePlayerNow({ silent: true });
-    return true;
+  function getPieceUpgradeCapLevel() {
+    return getPieceUpgradeCapLevelRaw(player);
   }
 
   function getStarUpgradeOwned(key) {
-    ensureStarsState();
-    return !!player.starUpgrades?.[key];
+    return getStarUpgradeOwnedRaw(player, key);
+  }
+
+  function getStarPrestigeGain() {
+    return getStarPrestigeGainRaw(player);
+  }
+
+  function getNextStarGainLevel(currentGain) {
+    return getNextStarGainLevelRaw(player, currentGain);
+  }
+
+  function canStarPrestige() {
+    return canStarPrestigeRaw(player);
+  }
+
+  function getPointsGainMultiplier() {
+    return getPointsGainMultiplierRaw(player);
   }
 
   function buyStarUpgrade(key, cost) {
-    ensureStarsState();
-    if (getStarUpgradeOwned(key)) return false;
-    if (player.stars < cost) return false;
-    player.stars -= cost;
-    player.starStats.spentTotal = Math.max(0, (player.starStats.spentTotal ?? 0) | 0) + cost;
-    player.starUpgrades[key] = true;
-    return true;
+    return buyStarUpgradeRaw(player, key, cost);
   }
 
   function buyStarUpgradeLevel(key, cost, maxLevel) {
-    ensureStarsState();
-    const current = Math.max(0, (player.starUpgrades?.[key] ?? 0) | 0);
-    const max = Math.max(0, maxLevel | 0);
-    if (current >= max) return false;
-    if (player.stars < cost) return false;
-    player.stars -= cost;
-    player.starStats.spentTotal = Math.max(0, (player.starStats.spentTotal ?? 0) | 0) + cost;
-    player.starUpgrades[key] = current + 1;
-    return true;
+    return buyStarUpgradeLevelRaw(player, key, cost, maxLevel);
   }
 
   function openClearsShop() {
@@ -1462,16 +702,6 @@ export function startApp() {
     return true;
   }
 
-  function getMaxDensityLevel() {
-    ensureGenerationSettings(player);
-    const baseThreshold = player.generation.noiseThreshold;
-    const step = CLEARS_SHOP_CONFIG.density.thresholdStep;
-    const minThreshold = CLEARS_SHOP_CONFIG.density.minNoiseThreshold;
-    if (step <= 0) return 0;
-    return Math.max(0, Math.floor((baseThreshold - minThreshold) / step));
-  }
-
-  const getPlayer = () => player;
   const getBallDps = (typeId) => dpsStats.dpsByType[typeId] ?? 0;
   const ballShopCtx = {
     dom,
@@ -1842,7 +1072,7 @@ export function startApp() {
   initBallShopUI(ballShopCtx);
   updateBallContextButton();
   updateHpOverlayButton();
-  populateChangelog();
+  populateChangelog({ appVersionEl, changelogVersionEl, changelogListEl }, CHANGELOG_LATEST);
   initTooltips();
 
   ensureProgress();
@@ -1931,10 +1161,10 @@ export function startApp() {
     grid.draw(ctx, { showHp: state.showHpOverlay });
     const showOnlyType = state.ballContextEnabled ? state.ballContextType : null;
     if (showOnlyType) {
-      for (const ball of game.balls) if (ball.typeId === showOnlyType) drawManualBallRay(ctx, ball);
+      for (const ball of game.balls) if (ball.typeId === showOnlyType) drawManualBallRay(ctx, ball, world, grid);
       for (const ball of game.balls) if (ball.typeId === showOnlyType) ball.draw(ctx);
     } else {
-      for (const ball of game.balls) drawManualBallRay(ctx, ball);
+      for (const ball of game.balls) drawManualBallRay(ctx, ball, world, grid);
       for (const ball of game.balls) ball.draw(ctx);
     }
 
