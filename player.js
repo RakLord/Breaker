@@ -73,6 +73,7 @@ export function createDefaultPlayer() {
       earnedTotal: 0,
       spentTotal: 0,
       lastPrestigeLevel: null,
+      lastPrestigeAt: Date.now(),
     },
     clearsBuffered: 0,
     clearsBufferedBricks: 0,
@@ -91,6 +92,7 @@ export function createDefaultPlayer() {
       damageMulti: false,
       persistence: false,
       dpsStats: false,
+      cursorSplash: false,
       advancedPersistence: false,
       heavyBall: false,
       starCollapse: false,
@@ -104,6 +106,9 @@ export function createDefaultPlayer() {
       boardWipe: false,
       moreBoardWipes: false,
       clearFireSale: false,
+      starboardMultiplier: false,
+      timeStarMult: false,
+      specialCap: false,
     },
     ballTypes: {},
     cursor: {
@@ -205,6 +210,7 @@ export function normalizePlayer(raw) {
     earnedTotal: Math.max(0, (rawStarStats.earnedTotal ?? 0) | 0),
     spentTotal: Math.max(0, (rawStarStats.spentTotal ?? 0) | 0),
     lastPrestigeLevel: Number.isFinite(rawStarStats.lastPrestigeLevel) ? rawStarStats.lastPrestigeLevel : null,
+    lastPrestigeAt: Number.isFinite(rawStarStats.lastPrestigeAt) ? rawStarStats.lastPrestigeAt : base.starStats.lastPrestigeAt,
   };
   starStats.earnedTotal = Math.max(starStats.earnedTotal, stars + starStats.spentTotal);
 
@@ -224,6 +230,7 @@ export function normalizePlayer(raw) {
     damageMulti: !!rawStarUpgrades.damageMulti,
     persistence: !!rawStarUpgrades.persistence,
     dpsStats: !!rawStarUpgrades.dpsStats,
+    cursorSplash: !!rawStarUpgrades.cursorSplash,
     advancedPersistence: !!rawStarUpgrades.advancedPersistence,
     heavyBall: !!rawStarUpgrades.heavyBall,
     starCollapse: !!rawStarUpgrades.starCollapse,
@@ -237,6 +244,9 @@ export function normalizePlayer(raw) {
     boardWipe: !!rawStarUpgrades.boardWipe,
     moreBoardWipes: !!rawStarUpgrades.moreBoardWipes,
     clearFireSale: !!rawStarUpgrades.clearFireSale,
+    starboardMultiplier: !!rawStarUpgrades.starboardMultiplier,
+    timeStarMult: !!rawStarUpgrades.timeStarMult,
+    specialCap: !!rawStarUpgrades.specialCap,
   };
 
   const rawBallTypes = raw.ballTypes && typeof raw.ballTypes === "object" ? raw.ballTypes : {};
@@ -476,9 +486,18 @@ export function ensureBallTypeState(player, typeId) {
 
 export function getBallCap(player, typeId) {
   const baseCap = BALL_SHOP_CONFIG[typeId]?.cap ?? 0;
-  if (typeId !== "normal" || !player) return baseCap;
-  const bonus = Math.max(0, Math.min(2, (player.starUpgrades?.normalCap ?? 0) | 0));
-  return baseCap + bonus;
+  if (!player) return baseCap;
+  if (typeId === "normal") {
+    const bonus = Math.max(0, Math.min(2, (player.starUpgrades?.normalCap ?? 0) | 0));
+    return baseCap + bonus;
+  }
+  if (
+    (typeId === "splash" || typeId === "sniper" || typeId === "sweeper") &&
+    player.starUpgrades?.specialCap
+  ) {
+    return baseCap + 2;
+  }
+  return baseCap;
 }
 
 export function getBallBuyCost(typeId, ownedCount) {

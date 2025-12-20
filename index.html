@@ -10,7 +10,7 @@
     <div id="app-shell">
       <header>
         <h1>Breaker</h1>
-        <div id="app-version" role="button" tabindex="0" aria-haspopup="dialog" aria-expanded="false">V0.2.4</div>
+        <div id="app-version" role="button" tabindex="0" aria-haspopup="dialog" aria-expanded="false">V0.2.5</div>
       </header>
 
       <main id="game-root">
@@ -239,6 +239,19 @@
                         <span class="btn-cost">(3)</span>
                       </button>
                     </div>
+                    <div class="stars-upgrade-row">
+                      <div class="stars-upgrade-level"><span id="star-cursor-splash-state">-</span></div>
+                      <button
+                        id="star-cursor-splash-buy"
+                        type="button"
+                        class="stars-upgrade-btn"
+                        data-tooltip-key="star-cursor-splash"
+                      >
+                        <span class="stars-icon" aria-hidden="true">S</span>
+                        <span class="btn-label">Manual Splash Ball</span>
+                        <span class="btn-cost">(3)</span>
+                      </button>
+                    </div>
                                         <div class="stars-upgrade-row">
                       <div class="stars-upgrade-level"><span id="star-advpersist-state">-</span></div>
                       <button id="star-advpersist-buy" type="button" class="stars-upgrade-btn" data-tooltip-key="star-adv-persist">
@@ -272,6 +285,22 @@
                       <button id="star-collapse-buy" type="button" class="stars-upgrade-btn" data-tooltip-key="star-collapse">
                         <span class="stars-icon" aria-hidden="true">C</span>
                         <span class="btn-label">Star Collapse</span>
+                        <span class="btn-cost">(5)</span>
+                      </button>
+                    </div>
+                    <div class="stars-upgrade-row">
+                      <div class="stars-upgrade-level"><span id="star-time-mult-state">-</span></div>
+                      <button id="star-time-mult-buy" type="button" class="stars-upgrade-btn" data-tooltip-key="star-time-mult">
+                        <span class="stars-icon" aria-hidden="true">T</span>
+                        <span class="btn-label">Time Star Mult</span>
+                        <span class="btn-cost">(5)</span>
+                      </button>
+                    </div>
+                    <div class="stars-upgrade-row">
+                      <div class="stars-upgrade-level"><span id="star-specialcap-state">-</span></div>
+                      <button id="star-specialcap-buy" type="button" class="stars-upgrade-btn" data-tooltip-key="star-special-cap">
+                        <span class="stars-icon" aria-hidden="true">C</span>
+                        <span class="btn-label">Special Ball Cap</span>
                         <span class="btn-cost">(5)</span>
                       </button>
                     </div>
@@ -409,6 +438,19 @@
                         <span class="btn-cost">(15)</span>
                       </button>
                     </div>
+                    <div class="stars-upgrade-row">
+                      <div class="stars-upgrade-level"><span id="star-starboard-mult-state">-</span></div>
+                      <button
+                        id="star-starboard-mult-buy"
+                        type="button"
+                        class="stars-upgrade-btn"
+                        data-tooltip-key="star-starboard-mult"
+                      >
+                        <span class="stars-icon" aria-hidden="true">S</span>
+                        <span class="btn-label">Starboard Mult</span>
+                        <span class="btn-cost">(15)</span>
+                      </button>
+                    </div>
                   </div>
                 </div>
 
@@ -440,6 +482,10 @@
                     <div class="stars-pill">
                       <div class="stars-pill-label">Earned</div>
                       <div class="stars-pill-value" id="stars-stats-line3"></div>
+                    </div>
+                    <div class="stars-pill">
+                      <div class="stars-pill-label">Time In Reset</div>
+                      <div class="stars-pill-value" id="stars-stats-line4"></div>
                     </div>
                   </div>
                 </div>
@@ -548,7 +594,7 @@
         <div class="changelog-panel">
           <div class="changelog-header">
             <div id="changelog-title">Changelog</div>
-            <div id="changelog-version" class="changelog-version">V0.2.4</div>
+            <div id="changelog-version" class="changelog-version">V0.2.5</div>
           </div>
           <ul id="changelog-list" class="changelog-list"></ul>
         </div>

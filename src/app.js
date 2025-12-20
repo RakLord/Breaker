@@ -45,21 +45,18 @@ import "tippy.js/dist/tippy.css";
 const CHANGELOG_LATEST = {
   version: "V0.2.4",
   items: [
-    "Tier 3 Heavy ball unlock (slow, high damage, no bounce on destroy).",
-    "Star Collapse upgrade for multi-star prestige rewards.",
-    "Tier 4 Balls Persist upgrade for Clears prestige.",
-    "Star Collapse now scales linearly (+1 star every 40 levels).",
-    "Tier 4 Better Star Formula upgrade (clears-based multiplier).",
-    "Better Basic Balls upgrade (+5 damage/speed to Normal balls).",
-    "Weaker Bricks Boost star upgrade (Tier 2).",
-    "More Points star upgrade (Tier 3, 1.2x points per level).",
     "Buffer Overflow star upgrade (Tier 4).",
-    "Board Wipe star upgrade (Tier 4).",
     "More Stars star upgrade (Tier 5).",
+    "Board Wipe star upgrade (Tier 4).",
     "More Board Wipes star upgrade (Tier 5).",
     "Clear Fire Sale star upgrade (Tier 5).",
     "Ball DPS tracking (10s window) shown in ball cards.",
     "DPS Stats star upgrade (Tier 1).",
+    "Starboard Mult star upgrade (Tier 5).",
+    "Manual Splash Ball star upgrade (Tier 2).",
+    "Time Star Mult star upgrade (Tier 3).",
+    "Stars modal shows time spent in current reset.",
+    "Special Ball Cap star upgrade (Tier 3).",
   ],
 };
 
@@ -117,6 +114,7 @@ export function startApp() {
     starPersistStateEl,
     starDpsStateEl,
     starAdvPersistStateEl,
+    starCursorSplashStateEl,
     starHeavyStateEl,
     starCollapseStateEl,
     starBallcountStateEl,
@@ -129,6 +127,9 @@ export function startApp() {
     starBoardWipeStateEl,
     starMoreBoardWipesStateEl,
     starClearFireSaleStateEl,
+    starStarboardMultStateEl,
+    starTimeMultStateEl,
+    starSpecialCapStateEl,
     starTier2Box,
     starTier3Box,
     starTier4Box,
@@ -143,6 +144,7 @@ export function startApp() {
     starPersistBuyBtn,
     starDpsBuyBtn,
     starAdvPersistBuyBtn,
+    starCursorSplashBuyBtn,
     starHeavyBuyBtn,
     starCollapseBuyBtn,
     starBallcountBuyBtn,
@@ -155,6 +157,9 @@ export function startApp() {
     starBoardWipeBuyBtn,
     starMoreBoardWipesBuyBtn,
     starClearFireSaleBuyBtn,
+    starStarboardMultBuyBtn,
+    starTimeMultBuyBtn,
+    starSpecialCapBuyBtn,
     starsModal,
     starsModalCloseBtn,
     starsBalanceEl,
@@ -163,6 +168,7 @@ export function startApp() {
     starsStatsLine1El,
     starsStatsLine2El,
     starsStatsLine3El,
+    starsStatsLine4El,
     starsOpenBoardBtn,
     starResetProgressTrack,
     starResetProgressFill,
@@ -202,6 +208,14 @@ export function startApp() {
   const STAR_BOARD_WIPE_CHANCE = 0.0001;
   const STAR_MORE_BOARD_WIPES_COST = 15;
   const STAR_CLEAR_FIRE_SALE_COST = 15;
+  const STAR_STARBOARD_MULT_COST = 15;
+  const STAR_CURSOR_SPLASH_COST = 3;
+  const STAR_TIME_MULT_COST = 5;
+  const STAR_TIME_MULT_MIN_SEC = 60;
+  const STAR_TIME_MULT_MAX_SEC = 60 * 60;
+  const STAR_TIME_MULT_MIN = 1;
+  const STAR_TIME_MULT_MAX = 5;
+  const STAR_SPECIAL_CAP_COST = 5;
   const DPS_WINDOW_MS = 10000;
   const DPS_WINDOW_SECONDS = DPS_WINDOW_MS / 1000;
 
@@ -235,7 +249,7 @@ export function startApp() {
     }
     if (state.boardWipeTriggered) return;
     if (!getStarUpgradeOwned("boardWipe")) return;
-    const chance = Math.min(1, STAR_BOARD_WIPE_CHANCE * (getStarUpgradeOwned("moreBoardWipes") ? 10 : 1));
+    const chance = Math.min(1, STAR_BOARD_WIPE_CHANCE * (getStarUpgradeOwned("moreBoardWipes") ? 3 : 1));
     if (chance <= 0) return;
     if (Math.random() >= chance) return;
     state.boardWipeTriggered = true;
@@ -686,14 +700,19 @@ export function startApp() {
   }
 
   function ensureCursorBall() {
+    const desiredTypeId = getStarUpgradeOwned("cursorSplash") ? "splash" : "normal";
     const existing = game.balls.find((ball) => ball?.data?.isCursorBall);
-    if (existing) return existing;
+    if (existing) {
+      if (existing.typeId === desiredTypeId) return existing;
+      game.balls = game.balls.filter((ball) => ball !== existing);
+    }
 
-    const type = BALL_TYPES.normal;
+    const type = BALL_TYPES[desiredTypeId] ?? BALL_TYPES.normal;
+    const typeState = ensureBallTypeState(player, type.id);
     const speedMult = getBallSpeedMultiplier(player, type.id);
     const starDamageMult = getStarUpgradeOwned("damageMulti") ? 2 : 1;
     const baseSpeed = 460 + Math.random() * 80;
-    const normalSpeedBonus = getStarUpgradeOwned("betterBasicBalls") ? 5 : 0;
+    const normalSpeedBonus = type.id === "normal" && getStarUpgradeOwned("betterBasicBalls") ? 5 : 0;
     const speed = (baseSpeed + normalSpeedBonus) * speedMult;
     const angle = -Math.PI / 2;
 
@@ -711,6 +730,11 @@ export function startApp() {
         baseDamage: type.baseDamage,
       },
     });
+    if (type.id === "splash") {
+      const baseR = type.splashRadiusCells ?? 1;
+      const bonus = Math.max(0, typeState.rangeLevel | 0);
+      ball.splashRadiusCells = baseR + bonus;
+    }
     game.balls.push(ball);
     return ball;
   }
@@ -919,6 +943,7 @@ export function startApp() {
         damageMulti: false,
         persistence: false,
         dpsStats: false,
+        cursorSplash: false,
         advancedPersistence: false,
         heavyBall: false,
         starCollapse: false,
@@ -932,6 +957,9 @@ export function startApp() {
         moreStars: false,
         moreBoardWipes: false,
         clearFireSale: false,
+        starboardMultiplier: false,
+        timeStarMult: false,
+        specialCap: false,
       };
     }
     for (const k of [
@@ -942,13 +970,19 @@ export function startApp() {
       "damageMulti",
       "persistence",
       "dpsStats",
+      "cursorSplash",
       "advancedPersistence",
       "heavyBall",
       "starCollapse",
+      "timeStarMult",
+      "specialCap",
       "ballcountPersist",
       "boardWipe",
       "moreBoardWipes",
       "clearFireSale",
+      "starboardMultiplier",
+      "timeStarMult",
+      "specialCap",
     ]) {
       player.starUpgrades[k] = !!player.starUpgrades[k];
     }
@@ -975,6 +1009,10 @@ export function startApp() {
     player.starUpgrades.moreStars = !!player.starUpgrades.moreStars;
     player.starUpgrades.moreBoardWipes = !!player.starUpgrades.moreBoardWipes;
     player.starUpgrades.clearFireSale = !!player.starUpgrades.clearFireSale;
+    player.starUpgrades.starboardMultiplier = !!player.starUpgrades.starboardMultiplier;
+    player.starUpgrades.timeStarMult = !!player.starUpgrades.timeStarMult;
+    player.starUpgrades.specialCap = !!player.starUpgrades.specialCap;
+    player.starUpgrades.cursorSplash = !!player.starUpgrades.cursorSplash;
 
     if (!player.starStats || typeof player.starStats !== "object") {
       player.starStats = {
@@ -982,6 +1020,7 @@ export function startApp() {
         earnedTotal: 0,
         spentTotal: 0,
         lastPrestigeLevel: null,
+        lastPrestigeAt: Date.now(),
       };
     }
     player.starStats.prestiges = Math.max(0, (player.starStats.prestiges ?? 0) | 0);
@@ -990,6 +1029,9 @@ export function startApp() {
     player.starStats.lastPrestigeLevel = Number.isFinite(player.starStats.lastPrestigeLevel)
       ? player.starStats.lastPrestigeLevel
       : null;
+    player.starStats.lastPrestigeAt = Number.isFinite(player.starStats.lastPrestigeAt)
+      ? player.starStats.lastPrestigeAt
+      : Date.now();
     player.starStats.earnedTotal = Math.max(player.starStats.earnedTotal, player.stars + player.starStats.spentTotal);
   }
 
@@ -1083,6 +1125,64 @@ export function startApp() {
     return Math.max(STAR_MORE_STARS_MIN_MULT, scaled);
   }
 
+  function getTimeStarMultiplier() {
+    if (!getStarUpgradeOwned("timeStarMult")) return 1;
+    ensureStarsState();
+    const last = player.starStats?.lastPrestigeAt;
+    const lastTime = Number.isFinite(last) ? last : Date.now();
+    const elapsedSec = Math.max(0, (Date.now() - lastTime) / 1000);
+    if (elapsedSec <= STAR_TIME_MULT_MIN_SEC) return STAR_TIME_MULT_MIN;
+    if (elapsedSec >= STAR_TIME_MULT_MAX_SEC) return STAR_TIME_MULT_MAX;
+    const t = (elapsedSec - STAR_TIME_MULT_MIN_SEC) / (STAR_TIME_MULT_MAX_SEC - STAR_TIME_MULT_MIN_SEC);
+    return STAR_TIME_MULT_MIN + t * (STAR_TIME_MULT_MAX - STAR_TIME_MULT_MIN);
+  }
+
+  function getStarboardUpgradeCount() {
+    ensureStarsState();
+    const u = player.starUpgrades ?? {};
+    const bools = [
+      "pieceCount",
+      "criticalHits",
+      "execution",
+      "clearsLogMult",
+      "damageMulti",
+      "persistence",
+      "dpsStats",
+      "cursorSplash",
+      "advancedPersistence",
+      "heavyBall",
+      "starCollapse",
+      "timeStarMult",
+      "ballcountPersist",
+      "betterBasicBalls",
+      "boardWipe",
+      "moreStars",
+      "moreBoardWipes",
+      "clearFireSale",
+      "starboardMultiplier",
+    ];
+    const levels = [
+      "pieceCap",
+      "normalCap",
+      "betterFormula",
+      "brickHpBoost",
+      "morePoints",
+      "bufferOverflow",
+    ];
+    let count = 0;
+    for (const key of bools) if (u[key]) count += 1;
+    for (const key of levels) {
+      const value = Number.isFinite(u[key]) ? Math.max(0, u[key] | 0) : 0;
+      count += value;
+    }
+    return count;
+  }
+
+  function getStarboardMultiplier() {
+    if (!getStarUpgradeOwned("starboardMultiplier")) return 1;
+    return Math.max(1, getStarboardUpgradeCount());
+  }
+
   function getPointsGainMultiplier() {
     ensureStarsState();
     const level = Math.max(0, Math.min(STAR_MORE_POINTS_MAX, (player.starUpgrades?.morePoints ?? 0) | 0));
@@ -1103,7 +1203,9 @@ export function startApp() {
     const level = player.progress?.level ?? 1;
     const base = getStarUpgradeOwned("starCollapse") ? getStarCollapseGain(level) : 1;
     const mult = getMoreStarsMultiplier();
-    return Math.max(1, Math.ceil(base * mult));
+    const starboardMult = getStarboardMultiplier();
+    const timeMult = getTimeStarMultiplier();
+    return Math.max(1, Math.ceil(base * mult * starboardMult * timeMult));
   }
 
   function getNextStarGainLevel(currentGain) {
@@ -1143,6 +1245,7 @@ export function startApp() {
     keepStarStats.prestiges = Math.max(0, (keepStarStats.prestiges ?? 0) | 0) + 1;
     keepStarStats.earnedTotal = Math.max(0, (keepStarStats.earnedTotal ?? 0) | 0) + gain;
     keepStarStats.lastPrestigeLevel = player.progress?.level ?? null;
+    keepStarStats.lastPrestigeAt = Date.now();
 
     player = normalizePlayer(createDefaultPlayer());
     player.stars = keepStars;
@@ -1456,6 +1559,7 @@ export function startApp() {
       pieceCap > 0 ||
       getStarUpgradeOwned("clearsLogMult") ||
       getStarUpgradeOwned("damageMulti") ||
+      getStarUpgradeOwned("cursorSplash") ||
       getStarUpgradeOwned("advancedPersistence") ||
       (player.starUpgrades?.brickHpBoost ?? 0) > 0
     );
@@ -1463,6 +1567,8 @@ export function startApp() {
   const anyTier3Bought = () =>
     getStarUpgradeOwned("heavyBall") ||
     getStarUpgradeOwned("starCollapse") ||
+    getStarUpgradeOwned("timeStarMult") ||
+    getStarUpgradeOwned("specialCap") ||
     getStarUpgradeOwned("betterBasicBalls") ||
     (player.starUpgrades?.morePoints ?? 0) > 0;
   const anyTier4Bought = () =>
@@ -1485,6 +1591,13 @@ export function startApp() {
     if (!anyTier1Bought()) return setMessage("Buy a Tier 1 upgrade first");
     if (buyStarUpgrade("damageMulti", 3)) setMessage("Damage Multi unlocked");
     else setMessage("Need 3 Stars");
+  });
+  starCursorSplashBuyBtn?.addEventListener("click", () => {
+    if (!anyTier1Bought()) return setMessage("Buy a Tier 1 upgrade first");
+    if (buyStarUpgrade("cursorSplash", STAR_CURSOR_SPLASH_COST)) {
+      ensureCursorBall();
+      setMessage("Manual Splash Ball unlocked");
+    } else setMessage(`Need ${STAR_CURSOR_SPLASH_COST} Stars`);
   });
   starPersistBuyBtn?.addEventListener("click", () => {
     if (buyStarUpgrade("persistence", 1)) setMessage("Persistance unlocked");
@@ -1517,6 +1630,16 @@ export function startApp() {
     if (buyStarUpgrade("starCollapse", 5)) setMessage("Star Collapse unlocked");
     else setMessage("Need 5 Stars");
   });
+  starTimeMultBuyBtn?.addEventListener("click", () => {
+    if (!anyTier2Bought()) return setMessage("Buy a Tier 2 upgrade first");
+    if (buyStarUpgrade("timeStarMult", STAR_TIME_MULT_COST)) setMessage("Time Star Mult unlocked");
+    else setMessage(`Need ${STAR_TIME_MULT_COST} Stars`);
+  });
+  starSpecialCapBuyBtn?.addEventListener("click", () => {
+    if (!anyTier2Bought()) return setMessage("Buy a Tier 2 upgrade first");
+    if (buyStarUpgrade("specialCap", STAR_SPECIAL_CAP_COST)) setMessage("Special Ball Cap unlocked");
+    else setMessage(`Need ${STAR_SPECIAL_CAP_COST} Stars`);
+  });
   starMorePointsBuyBtn?.addEventListener("click", () => {
     if (!anyTier2Bought()) return setMessage("Buy a Tier 2 upgrade first");
     if (buyStarUpgradeLevel("morePoints", STAR_MORE_POINTS_COST, STAR_MORE_POINTS_MAX)) {
@@ -1548,6 +1671,11 @@ export function startApp() {
     if (!anyTier4Bought()) return setMessage("Buy a Tier 4 upgrade first");
     if (buyStarUpgrade("clearFireSale", STAR_CLEAR_FIRE_SALE_COST)) setMessage("Clear Fire Sale unlocked");
     else setMessage(`Need ${STAR_CLEAR_FIRE_SALE_COST} Stars`);
+  });
+  starStarboardMultBuyBtn?.addEventListener("click", () => {
+    if (!anyTier4Bought()) return setMessage("Buy a Tier 4 upgrade first");
+    if (buyStarUpgrade("starboardMultiplier", STAR_STARBOARD_MULT_COST)) setMessage("Starboard Mult unlocked");
+    else setMessage(`Need ${STAR_STARBOARD_MULT_COST} Stars`);
   });
   starBasicBallsBuyBtn?.addEventListener("click", () => {
     if (!anyTier2Bought()) return setMessage("Buy a Tier 2 upgrade first");
@@ -1934,7 +2062,15 @@ export function startApp() {
       if (clearsStatsLine3El) clearsStatsLine3El.textContent = `+${player.clearsStats.bestGain ?? 0}`;
     }
 
-    if (starsBalanceEl || starsPrestigeBtn || starsPrestigeReqEl || starsStatsLine1El || starsStatsLine2El || starsStatsLine3El) {
+    if (
+      starsBalanceEl ||
+      starsPrestigeBtn ||
+      starsPrestigeReqEl ||
+      starsStatsLine1El ||
+      starsStatsLine2El ||
+      starsStatsLine3El ||
+      starsStatsLine4El
+    ) {
       ensureStarsState();
       const stars = Math.max(0, (player.stars ?? 0) | 0);
       const ok = canStarPrestige();
@@ -1951,6 +2087,21 @@ export function startApp() {
       if (starsStatsLine1El) starsStatsLine1El.textContent = `${prestiges}`;
       if (starsStatsLine2El) starsStatsLine2El.textContent = Number.isFinite(last) ? `${last}` : "-";
       if (starsStatsLine3El) starsStatsLine3El.textContent = `${earned}`;
+      if (starsStatsLine4El) {
+        const lastAt = player.starStats?.lastPrestigeAt;
+        const elapsedMs = Number.isFinite(lastAt) ? Math.max(0, Date.now() - lastAt) : null;
+        const totalSec = elapsedMs === null ? null : Math.floor(elapsedMs / 1000);
+        const hours = totalSec === null ? 0 : Math.floor(totalSec / 3600);
+        const mins = totalSec === null ? 0 : Math.floor((totalSec % 3600) / 60);
+        const secs = totalSec === null ? 0 : totalSec % 60;
+        let text = "-";
+        if (totalSec !== null) {
+          if (hours > 0) text = `${hours}h ${mins}m`;
+          else if (mins > 0) text = `${mins}m ${secs}s`;
+          else text = `${secs}s`;
+        }
+        starsStatsLine4El.textContent = text;
+      }
     }
 
     const setStarOwned = (el, owned) => {
@@ -1990,9 +2141,12 @@ export function startApp() {
     setStarOwned(starDmgMultStateEl, getStarUpgradeOwned("damageMulti"));
     setStarOwned(starPersistStateEl, getStarUpgradeOwned("persistence"));
     setStarOwned(starDpsStateEl, getStarUpgradeOwned("dpsStats"));
+    setStarOwned(starCursorSplashStateEl, getStarUpgradeOwned("cursorSplash"));
     setStarOwned(starAdvPersistStateEl, getStarUpgradeOwned("advancedPersistence"));
     setStarOwned(starHeavyStateEl, getStarUpgradeOwned("heavyBall"));
     setStarOwned(starCollapseStateEl, getStarUpgradeOwned("starCollapse"));
+    setStarOwned(starTimeMultStateEl, getStarUpgradeOwned("timeStarMult"));
+    setStarOwned(starSpecialCapStateEl, getStarUpgradeOwned("specialCap"));
     setStarOwned(starBallcountStateEl, getStarUpgradeOwned("ballcountPersist"));
     setStarOwned(starBasicBallsStateEl, getStarUpgradeOwned("betterBasicBalls"));
     if (starMorePointsStateEl) {
@@ -2011,6 +2165,7 @@ export function startApp() {
     setStarOwned(starMoreStarsStateEl, getStarUpgradeOwned("moreStars"));
     setStarOwned(starMoreBoardWipesStateEl, getStarUpgradeOwned("moreBoardWipes"));
     setStarOwned(starClearFireSaleStateEl, getStarUpgradeOwned("clearFireSale"));
+    setStarOwned(starStarboardMultStateEl, getStarUpgradeOwned("starboardMultiplier"));
     if (starBrickBoostStateEl) {
       ensureStarsState();
       const lv = Math.max(0, Math.min(STAR_BRICK_BOOST_MAX, (player.starUpgrades?.brickHpBoost ?? 0) | 0));
@@ -2062,6 +2217,9 @@ export function startApp() {
     if (starClearsLogBuyBtn)
       starClearsLogBuyBtn.disabled = tier2Locked || getStarUpgradeOwned("clearsLogMult") || starsNow < 3;
     if (starDmgMultBuyBtn) starDmgMultBuyBtn.disabled = tier2Locked || getStarUpgradeOwned("damageMulti") || starsNow < 3;
+    if (starCursorSplashBuyBtn)
+      starCursorSplashBuyBtn.disabled =
+        tier2Locked || getStarUpgradeOwned("cursorSplash") || starsNow < STAR_CURSOR_SPLASH_COST;
     if (starPersistBuyBtn) starPersistBuyBtn.disabled = getStarUpgradeOwned("persistence") || starsNow < 1;
     if (starDpsBuyBtn) starDpsBuyBtn.disabled = getStarUpgradeOwned("dpsStats") || starsNow < 1;
     if (starAdvPersistBuyBtn)
@@ -2077,6 +2235,12 @@ export function startApp() {
       starHeavyBuyBtn.disabled = tier3Locked || getStarUpgradeOwned("heavyBall") || starsNow < 5;
     if (starCollapseBuyBtn)
       starCollapseBuyBtn.disabled = tier3Locked || getStarUpgradeOwned("starCollapse") || starsNow < 5;
+    if (starTimeMultBuyBtn)
+      starTimeMultBuyBtn.disabled =
+        tier3Locked || getStarUpgradeOwned("timeStarMult") || starsNow < STAR_TIME_MULT_COST;
+    if (starSpecialCapBuyBtn)
+      starSpecialCapBuyBtn.disabled =
+        tier3Locked || getStarUpgradeOwned("specialCap") || starsNow < STAR_SPECIAL_CAP_COST;
     if (starMorePointsBuyBtn) {
       ensureStarsState();
       const lv = Math.max(0, Math.min(STAR_MORE_POINTS_MAX, (player.starUpgrades?.morePoints ?? 0) | 0));
@@ -2101,6 +2265,9 @@ export function startApp() {
     if (starClearFireSaleBuyBtn)
       starClearFireSaleBuyBtn.disabled =
         tier5Locked || getStarUpgradeOwned("clearFireSale") || starsNow < STAR_CLEAR_FIRE_SALE_COST;
+    if (starStarboardMultBuyBtn)
+      starStarboardMultBuyBtn.disabled =
+        tier5Locked || getStarUpgradeOwned("starboardMultiplier") || starsNow < STAR_STARBOARD_MULT_COST;
     if (starBasicBallsBuyBtn)
       starBasicBallsBuyBtn.disabled =
         tier3Locked || getStarUpgradeOwned("betterBasicBalls") || starsNow < STAR_BASIC_BALLS_COST;
