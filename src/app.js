@@ -565,6 +565,94 @@ export function startApp() {
     return canStarPrestigeRaw(player);
   }
 
+  function starPrestigeNow() {
+    ensureStarsState();
+    if (!canStarPrestige()) {
+      setMessage(`Need Level ${STAR_PRESTIGE_LEVEL}`);
+      return false;
+    }
+
+    const gain = getStarPrestigeGain();
+    const ok = window.confirm(
+      `Star Prestige will reset points/clears/balls and all lower-layer upgrades.\n\nYou will gain +${gain} Star${
+        gain === 1 ? "" : "s"
+      }.\n\nContinue?`
+    );
+    if (!ok) return false;
+
+    const keepStars = Math.max(0, (player.stars ?? 0) | 0) + gain;
+    const keepStarUpgrades = { ...(player.starUpgrades ?? {}) };
+    const keepStarStats = { ...(player.starStats ?? {}) };
+    const keepManualBallToastShown = !!player.tutorials?.manualBallToastShown;
+    const keepUiState = player.ui && typeof player.ui === "object" ? { ...player.ui } : null;
+    const keepNormal = getStarUpgradeOwned("persistence");
+    const keepOthers = getStarUpgradeOwned("advancedPersistence");
+    const preservedBallTypes = {};
+    if (keepNormal) {
+      const s = ensureBallTypeState(player, "normal");
+      preservedBallTypes.normal = {
+        damageLevel: s.damageLevel,
+        speedLevel: s.speedLevel,
+        rangeLevel: s.rangeLevel,
+        sizeLevel: s.sizeLevel,
+        pieceLevel: s.pieceLevel,
+        critLevel: s.critLevel,
+        executionLevel: s.executionLevel,
+      };
+    }
+    if (keepOthers) {
+      for (const typeId of Object.keys(BALL_TYPES)) {
+        if (typeId === "normal") continue;
+        const s = ensureBallTypeState(player, typeId);
+        preservedBallTypes[typeId] = {
+          damageLevel: s.damageLevel,
+          speedLevel: s.speedLevel,
+          rangeLevel: s.rangeLevel,
+          sizeLevel: s.sizeLevel,
+          pieceLevel: s.pieceLevel,
+          critLevel: s.critLevel,
+          executionLevel: s.executionLevel,
+        };
+      }
+    }
+    keepStarStats.prestiges = Math.max(0, (keepStarStats.prestiges ?? 0) | 0) + 1;
+    keepStarStats.earnedTotal = Math.max(0, (keepStarStats.earnedTotal ?? 0) | 0) + gain;
+    keepStarStats.lastPrestigeLevel = player.progress?.level ?? null;
+    keepStarStats.lastPrestigeAt = Date.now();
+
+    player = normalizePlayer(createDefaultPlayer());
+    player.stars = keepStars;
+    player.starUpgrades = keepStarUpgrades;
+    player.starStats = keepStarStats;
+    player.ballTypes = preservedBallTypes;
+    ensureTutorialState().manualBallToastShown = keepManualBallToastShown;
+    if (keepUiState) player.ui = keepUiState;
+    syncUiStateFromPlayer();
+    updateBallContextButton();
+    updateHpOverlayButton();
+
+    ensureCursorState(player).level = 0;
+    ensureGenerationSettings(player);
+    ensureClearsUpgrades(player);
+    ensureProgress();
+    player.progress.level = 1;
+    player.progress.masterSeed = (Math.random() * 2 ** 32) >>> 0;
+
+    updateGridFromPlayer();
+    window.player = player;
+
+    game.balls = [];
+    regenerate();
+    spawnBallAt(world.width * 0.5, world.height * 0.85, "normal", { free: true });
+    ensureCursorBall();
+    ensureHeavyBall();
+    applyUpgradesToAllBalls();
+
+    setMessage(`Gained +${gain} Star${gain === 1 ? "" : "s"}`);
+    savePlayerNow({ silent: true });
+    return true;
+  }
+
   function getPointsGainMultiplier() {
     return getPointsGainMultiplierRaw(player);
   }
