@@ -573,10 +573,12 @@ export function startApp() {
     }
 
     const gain = getStarPrestigeGain();
+    const keepBalls = getStarUpgradeOwned("ballcountPersist");
+    const resetCopy = keepBalls
+      ? "Star Prestige will reset points/clears and all lower-layer upgrades.\n\nYour balls will persist (Ballcount Persist)."
+      : "Star Prestige will reset points/clears/balls and all lower-layer upgrades.";
     const ok = window.confirm(
-      `Star Prestige will reset points/clears/balls and all lower-layer upgrades.\n\nYou will gain +${gain} Star${
-        gain === 1 ? "" : "s"
-      }.\n\nContinue?`
+      `${resetCopy}\n\nYou will gain +${gain} Star${gain === 1 ? "" : "s"}.\n\nContinue?`
     );
     if (!ok) return false;
 
@@ -585,6 +587,9 @@ export function startApp() {
     const keepStarStats = { ...(player.starStats ?? {}) };
     const keepManualBallToastShown = !!player.tutorials?.manualBallToastShown;
     const keepUiState = player.ui && typeof player.ui === "object" ? { ...player.ui } : null;
+    const preservedBalls = keepBalls
+      ? game.balls.filter((ball) => !ball.data?.isCursorBall)
+      : [];
     const keepNormal = getStarUpgradeOwned("persistence");
     const keepOthers = getStarUpgradeOwned("advancedPersistence");
     const preservedBallTypes = {};
@@ -641,9 +646,11 @@ export function startApp() {
     updateGridFromPlayer();
     window.player = player;
 
-    game.balls = [];
+    game.balls = keepBalls ? preservedBalls : [];
     regenerate();
-    spawnBallAt(world.width * 0.5, world.height * 0.85, "normal", { free: true });
+    if (!keepBalls || preservedBalls.length === 0) {
+      spawnBallAt(world.width * 0.5, world.height * 0.85, "normal", { free: true });
+    }
     ensureCursorBall();
     ensureHeavyBall();
     applyUpgradesToAllBalls();

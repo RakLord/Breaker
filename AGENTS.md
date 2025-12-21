@@ -59,3 +59,5 @@ Key player fields:
    - Manual smoke test: save/load, upgrade purchase, prestige flows.
 6. **Project context**
    - If you add new systems, entry points, or storage formats, add them to this file so future changes stay discoverable.
+7. **Changelog**
+   - Record all changes in `CHANGELOG.md` under the newest version entry.
