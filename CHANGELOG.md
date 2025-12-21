@@ -8,6 +8,10 @@
 - Stats & Info now includes clears/stars reset timers, rates, and best gains.
 - Stats & Info now shows current/highest level plus levels per second/minute.
 - Wide screens (>=1700px) now show a double-width sidebar with two columns.
+- Heavy ball base size increased and damage scaling boosted.
+- Added keyboard "M" shortcut to buy all ball upgrades.
+- Removed ball card minimize toggle.
+- Crit/Execute upgrades now cap at their functional limits and show MAX.
 
 ## V0.2.4
 - Buffer Overflow star upgrade (Tier 4).

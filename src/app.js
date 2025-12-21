@@ -21,10 +21,19 @@ import {
   getBrickHpUpgradeCost,
   getBrickHpEffectLevel,
   getBrickHpUpgradeLevel,
+  getBallCritUpgradeCost,
+  getBallDamageUpgradeCost,
+  getBallExecutionUpgradeCost,
+  getBallPieceCountUpgradeCost,
+  getBallSizeUpgradeCost,
+  getBallSpeedUpgradeCost,
+  getSplashRangeCap,
+  getSplashRangeUpgradeCost,
   getPoints,
   loadPlayerFromStorage,
   normalizePlayer,
   savePlayerToStorage,
+  trySpendPoints,
   trySpendClears,
 } from "../player.js";
 import { createBallLogic, drawManualBallRay } from "./game/ballLogic.js";
@@ -64,7 +73,13 @@ import {
   canStarPrestige as canStarPrestigeRaw,
 } from "./game/stars.js";
 import { buildPlayerSnapshot, decodeSaveString, encodeSaveString } from "./game/storage.js";
-import { getCritChanceForLevel, getExecuteRatioForLevel, getPieceCountForLevel } from "./game/upgradeMath.js";
+import {
+  getCritChanceForLevel,
+  getCritLevelCap,
+  getExecuteLevelCap,
+  getExecuteRatioForLevel,
+  getPieceCountForLevel,
+} from "./game/upgradeMath.js";
 import { applyWorldTransform, screenToWorld, updateCanvasView } from "./game/view.js";
 import { initBallShopUI, updateBallShopCards } from "./ui/ballShop.js";
 import { CHANGELOG_LATEST, createChangelogController, populateChangelog } from "./ui/changelog.js";
@@ -785,6 +800,103 @@ export function startApp() {
     exportImportModal.setAttribute("aria-hidden", "true");
   }
 
+  function buyAllBallUpgrades() {
+    let purchased = 0;
+    let didPurchase = false;
+    const maxPasses = 250;
+    let passes = 0;
+
+    do {
+      didPurchase = false;
+      for (const typeId of Object.keys(BALL_TYPES)) {
+        if (typeId === "heavy" && !getStarUpgradeOwned("heavyBall")) continue;
+        const typeState = ensureBallTypeState(player, typeId);
+
+        const damageCost = getBallDamageUpgradeCost(player, typeId);
+        if (trySpendPoints(player, damageCost)) {
+          typeState.damageLevel += 1;
+          didPurchase = true;
+          purchased += 1;
+        }
+
+        const speedCost = getBallSpeedUpgradeCost(player, typeId);
+        if (trySpendPoints(player, speedCost)) {
+          typeState.speedLevel += 1;
+          didPurchase = true;
+          purchased += 1;
+        }
+
+        if (typeId === "heavy") {
+          const sizeCap = 10;
+          if (typeState.sizeLevel < sizeCap) {
+            const sizeCost = getBallSizeUpgradeCost(player, typeId);
+            if (trySpendPoints(player, sizeCost)) {
+              typeState.sizeLevel += 1;
+              didPurchase = true;
+              purchased += 1;
+            }
+          }
+        }
+
+        if (typeId === "splash") {
+          const cap = getSplashRangeCap();
+          if (typeState.rangeLevel < cap) {
+            const rangeCost = getSplashRangeUpgradeCost(player);
+            if (trySpendPoints(player, rangeCost)) {
+              typeState.rangeLevel += 1;
+              didPurchase = true;
+              purchased += 1;
+            }
+          }
+        }
+
+        if (getStarUpgradeOwned("pieceCount")) {
+          const cap = getPieceUpgradeCapLevel();
+          if (typeState.pieceLevel < cap) {
+            const cost = getBallPieceCountUpgradeCost(player, typeId);
+            if (trySpendPoints(player, cost)) {
+              typeState.pieceLevel += 1;
+              didPurchase = true;
+              purchased += 1;
+            }
+          }
+        }
+
+        if (getStarUpgradeOwned("criticalHits")) {
+          const cap = getCritLevelCap();
+          if (typeState.critLevel < cap) {
+            const cost = getBallCritUpgradeCost(player, typeId);
+            if (trySpendPoints(player, cost)) {
+              typeState.critLevel += 1;
+              didPurchase = true;
+              purchased += 1;
+            }
+          }
+        }
+
+        if (getStarUpgradeOwned("execution")) {
+          const cap = getExecuteLevelCap();
+          if (typeState.executionLevel < cap) {
+            const cost = getBallExecutionUpgradeCost(player, typeId);
+            if (trySpendPoints(player, cost)) {
+              typeState.executionLevel += 1;
+              didPurchase = true;
+              purchased += 1;
+            }
+          }
+        }
+      }
+      passes += 1;
+    } while (didPurchase && passes < maxPasses);
+
+    if (purchased > 0) {
+      applyUpgradesToAllBalls();
+      setMessage(`Bought ${purchased} upgrades`);
+    } else {
+      setMessage("No upgrades affordable");
+    }
+  }
+
   function formatDurationShort(elapsedMs) {
     if (!Number.isFinite(elapsedMs)) return "-";
     const totalSec = Math.max(0, Math.floor(elapsedMs / 1000));
@@ -1274,6 +1386,11 @@ export function startApp() {
     if (e.code === "KeyS") {
       if (!starBoardBtn || starBoardBtn.classList.contains("hidden")) return;
       openStarsModal();
+      e.preventDefault();
+      return;
+    }
+    if (e.code === "KeyM") {
+      buyAllBallUpgrades();
       e.preventDefault();
       return;
     }

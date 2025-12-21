@@ -62,7 +62,7 @@ export const BALL_TYPES = {
     id: "heavy",
     name: "Heavy",
     color: "#8840a5ff",
-    radius: 12,
+    radius: 22,
     baseDamage: 100,
     bounceOnBlocks: true,
     onBlockHit({ grid, col, row, ball }) {

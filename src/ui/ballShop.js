@@ -19,6 +19,7 @@ import {
   trySpendPoints,
 } from "../../player.js";
 import { clamp } from "../game/math.js";
+import { getCritLevelCap, getExecuteLevelCap } from "../game/upgradeMath.js";
 import { initTooltips } from "../tooltips.js";
 
 export function ensureBallCard(ctx, typeId) {
@@ -31,9 +32,6 @@ export function ensureBallCard(ctx, typeId) {
   const card = document.createElement("div");
   card.className = "ball-card";
   card.dataset.type = type.id;
-  if (typeof ctx.getBallCardMinimized === "function" && ctx.getBallCardMinimized(type.id)) {
-    card.classList.add("card-minimized");
-  }
   if (type.id === "heavy" && !ctx.getStarUpgradeOwned("heavyBall")) {
     card.classList.add("hidden");
   }
@@ -72,7 +70,6 @@ export function ensureBallCard(ctx, typeId) {
   card.innerHTML = `
       <div class="ball-card-header">
         <div class="ball-name">${type.name}</div>
-        <button type="button" class="ball-card-toggle" data-action="toggle" aria-label="Toggle card"></button>
       </div>
 
       <div class="ball-card-body">
@@ -173,22 +170,10 @@ export function initBallShopUI(ctx) {
     if (!typeId) return;
 
     const btn = e.target.closest("button[data-action]");
-    if (!btn) {
-      if (card.classList.contains("card-minimized") && e.target.closest(".ball-card-header")) {
-        card.classList.remove("card-minimized");
-        ctx.setBallCardMinimized?.(typeId, false);
-      }
-      return;
-    }
+    if (!btn) return;
 
     const player = ctx.getPlayer();
     const action = btn.dataset.action;
-    if (action === "toggle") {
-      const next = !card.classList.contains("card-minimized");
-      card.classList.toggle("card-minimized", next);
-      ctx.setBallCardMinimized?.(typeId, next);
-      return;
-    }
     if (action === "buy") {
       ctx.spawnBallAt(ctx.world.width * 0.5, ctx.world.height * 0.85, typeId);
       return;
@@ -241,17 +226,23 @@ export function initBallShopUI(ctx) {
     }
     if (action === "crit-up") {
       if (!ctx.getStarUpgradeOwned("criticalHits")) return ctx.setMessage("Unlock Critical Hits in Star Board");
+      const state = ensureBallTypeState(player, typeId);
+      const cap = getCritLevelCap();
+      if (state.critLevel >= cap) return ctx.setMessage(`Crit max (Lv ${cap})`);
       const cost = getBallCritUpgradeCost(player, typeId);
       if (!trySpendPoints(player, cost)) return ctx.setMessage(`Need ${formatInt(cost)}`);
-      ensureBallTypeState(player, typeId).critLevel += 1;
+      state.critLevel += 1;
       ctx.setMessage(`${typeId} crit upgraded`);
       return;
     }
     if (action === "exec-up") {
       if (!ctx.getStarUpgradeOwned("execution")) return ctx.setMessage("Unlock Execution in Star Board");
+      const state = ensureBallTypeState(player, typeId);
+      const cap = getExecuteLevelCap();
+      if (state.executionLevel >= cap) return ctx.setMessage(`Execute max (Lv ${cap})`);
       const cost = getBallExecutionUpgradeCost(player, typeId);
       if (!trySpendPoints(player, cost)) return ctx.setMessage(`Need ${formatInt(cost)}`);
-      ensureBallTypeState(player, typeId).executionLevel += 1;
+      state.executionLevel += 1;
       ctx.setMessage(`${typeId} execution upgraded`);
     }
   });
@@ -309,9 +300,6 @@ export function updateBallShopCards(ctx) {
   for (const typeId of Object.keys(BALL_TYPES)) {
     const card = ensureBallCard(ctx, typeId);
     if (!card) continue;
-    if (typeof ctx.getBallCardMinimized === "function") {
-      card.classList.toggle("card-minimized", ctx.getBallCardMinimized(typeId));
-    }
     if (typeId === "heavy" && !ctx.getStarUpgradeOwned("heavyBall")) {
       card.classList.add("hidden");
       continue;
@@ -442,29 +430,33 @@ export function updateBallShopCards(ctx) {
     }
 
     if (critUnlocked) {
+      const capLevel = getCritLevelCap();
+      const atCap = typeState.critLevel >= capLevel;
       const cost = getBallCritUpgradeCost(player, typeId);
       const lvlEl = card.querySelector('[data-role="crit-lvl"]');
-      if (lvlEl) lvlEl.textContent = String(typeState.critLevel);
+      if (lvlEl) lvlEl.textContent = atCap ? "MAX" : String(typeState.critLevel);
       const maxEl = card.querySelector('[data-role="crit-max"]');
-      if (maxEl) maxEl.textContent = "";
+      if (maxEl) maxEl.textContent = atCap ? "" : `/${capLevel}`;
       const costEl = card.querySelector('[data-role="crit-cost"]');
-      if (costEl) costEl.textContent = formatInt(cost);
-      setProgress(card, "crit-progress", getAffordRatio(cost));
+      if (costEl) costEl.textContent = atCap ? "MAX" : formatInt(cost);
+      setProgress(card, "crit-progress", atCap ? 1 : getAffordRatio(cost));
       const btn = card.querySelector('button[data-action="crit-up"]');
-      if (btn) btn.disabled = !canAfford(player, cost);
+      if (btn) btn.disabled = atCap || !canAfford(player, cost);
     }
 
     if (execUnlocked) {
+      const capLevel = getExecuteLevelCap();
+      const atCap = typeState.executionLevel >= capLevel;
       const cost = getBallExecutionUpgradeCost(player, typeId);
       const lvlEl = card.querySelector('[data-role="exec-lvl"]');
-      if (lvlEl) lvlEl.textContent = String(typeState.executionLevel);
+      if (lvlEl) lvlEl.textContent = atCap ? "MAX" : String(typeState.executionLevel);
       const maxEl = card.querySelector('[data-role="exec-max"]');
-      if (maxEl) maxEl.textContent = "";
+      if (maxEl) maxEl.textContent = atCap ? "" : `/${capLevel}`;
       const costEl = card.querySelector('[data-role="exec-cost"]');
-      if (costEl) costEl.textContent = formatInt(cost);
-      setProgress(card, "exec-progress", getAffordRatio(cost));
+      if (costEl) costEl.textContent = atCap ? "MAX" : formatInt(cost);
+      setProgress(card, "exec-progress", atCap ? 1 : getAffordRatio(cost));
       const btn = card.querySelector('button[data-action="exec-up"]');
-      if (btn) btn.disabled = !canAfford(player, cost);
+      if (btn) btn.disabled = atCap || !canAfford(player, cost);
     }
 
     const piecesRow = card.querySelector('[data-role="pieces-row"]');

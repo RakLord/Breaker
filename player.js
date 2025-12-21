@@ -619,6 +619,7 @@ export function getBallDamageValue(player, typeId, baseDamage) {
   if (typeId === "normal" && player?.starUpgrades?.betterBasicBalls) base += 5;
   let perLevel = getBallDamagePerLevel(base);
   if (typeId === "sweeper") perLevel *= 2;
+  if (typeId === "heavy") perLevel *= 2;
   return base + perLevel * level;
 }
 
