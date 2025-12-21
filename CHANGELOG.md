@@ -2,6 +2,7 @@
 
 ## V0.2.5
 - Unreleased.
+- DPS stats now track real damage per second (10s window) instead of kills.
 
 ## V0.2.4
 - Buffer Overflow star upgrade (Tier 4).

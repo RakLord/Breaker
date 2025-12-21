@@ -229,15 +229,12 @@ export function startApp() {
   world.cursor = { x: world.width * 0.5, y: world.height * 0.5, active: false };
 
   const grid = new BlockGrid({ cellSize: 56, cols: 10, rows: 10 });
-  const dpsStats = { killsByType: {}, dpsByType: {} };
+  const dpsStats = { damageByType: {}, dpsByType: {} };
   for (const typeId of Object.keys(BALL_TYPES)) {
-    dpsStats.killsByType[typeId] = 0;
+    dpsStats.damageByType[typeId] = 0;
     dpsStats.dpsByType[typeId] = 0;
   }
   grid.onCellDestroyed = (_index, sourceTypeId) => {
-    if (sourceTypeId) {
-      dpsStats.killsByType[sourceTypeId] = (dpsStats.killsByType[sourceTypeId] ?? 0) + 1;
-    }
     if (state.boardWipeTriggered) return;
     if (!getStarUpgradeOwned("boardWipe")) return;
     const chance = Math.min(1, STAR_BOARD_WIPE_CHANCE * (getStarUpgradeOwned("moreBoardWipes") ? 3 : 1));
@@ -1193,9 +1190,9 @@ export function startApp() {
   }, 15000);
   setInterval(() => {
     for (const typeId of Object.keys(BALL_TYPES)) {
-      const kills = dpsStats.killsByType[typeId] ?? 0;
-      dpsStats.dpsByType[typeId] = kills / DPS_WINDOW_SECONDS;
-      dpsStats.killsByType[typeId] = 0;
+      const damage = dpsStats.damageByType[typeId] ?? 0;
+      dpsStats.dpsByType[typeId] = damage / DPS_WINDOW_SECONDS;
+      dpsStats.damageByType[typeId] = 0;
     }
   }, DPS_WINDOW_MS);
 
@@ -1212,7 +1209,13 @@ export function startApp() {
     applyUpgradesToAllBalls();
 
     let damageDealt = 0;
-    for (const ball of game.balls) damageDealt += ball.step(dt, world, grid);
+    for (const ball of game.balls) {
+      const dealt = ball.step(dt, world, grid);
+      damageDealt += dealt;
+      if (dealt > 0) {
+        dpsStats.damageByType[ball.typeId] = (dpsStats.damageByType[ball.typeId] ?? 0) + dealt;
+      }
+    }
     if (damageDealt > 0) {
       const rounded = Math.round(damageDealt * 1000) / 1000;
       const mult = getPointsGainMultiplier();
