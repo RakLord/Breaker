@@ -14,10 +14,13 @@ Primary definitions and normalization live in `player.js`:
 Key player fields:
 - `points`, `clears`: strings (Decimal).
 - `stars`: number.
+- `clearsStats`: `{ prestiges, lastGain, bestGain, lastPrestigeAt }`.
+- `starStats`: `{ prestiges, earnedTotal, spentTotal, lastPrestigeLevel, lastPrestigeAt, bestGain }`.
 - `clearsUpgrades`: `{ densityLevel, gridSizeLevel, brickHpLevel }`.
 - `starUpgrades`: booleans and leveled fields (see `player.js` + `src/game/stars.js`).
 - `ballTypes[typeId]`: `{ damageLevel, speedLevel, rangeLevel, sizeLevel, pieceLevel, critLevel, executionLevel }`.
-- `progress`: `{ level, masterSeed }`.
+- `stats`: `{ bestDpsByType }`.
+- `progress`: `{ level, masterSeed, bestLevel }`.
 - `game`: `{ balls, grid, initialBlocks }` (persisted save snapshot).
 - `ui`: `{ ballContextEnabled, showHpOverlay, ballCardMinimized }`.
 - `tutorials`: `{ manualBallToastShown }`.

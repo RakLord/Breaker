@@ -35,6 +35,7 @@
             <div class="hud-group">
               <button id="clears-shop-btn" type="button">Clears</button>
               <button id="star-board-btn" type="button">Stars</button>
+              <button id="stats-info-btn" type="button">Stats &amp; Info</button>
               <button id="settings-btn" type="button">Settings</button>
             </div>
           </div>
@@ -509,6 +510,86 @@
                   <button id="load-btn" type="button">Load</button>
                   <button id="export-import-btn" type="button">Export / Import</button>
                   <button id="hard-reset-btn" type="button">Hard Reset</button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div id="stats-info-modal" class="modal hidden" aria-hidden="true">
+            <div class="modal-backdrop" data-action="close"></div>
+            <div class="modal-panel" role="dialog" aria-modal="true" aria-labelledby="stats-info-title">
+              <div class="modal-header">
+                <div id="stats-info-title" class="modal-title">Stats &amp; Info</div>
+                <button id="stats-info-close" type="button" class="modal-close" aria-label="Close">X</button>
+              </div>
+              <div class="modal-body stats-info-layout">
+                <div class="stats-info-section">
+                  <div class="stats-info-section-title">Ball DPS (10s)</div>
+                  <div class="stats-info-total">
+                    <span class="stats-info-total-label">Total DPS</span>
+                    <span id="stats-info-total-dps" class="stats-info-total-value">0.00</span>
+                  </div>
+                  <div class="stats-info-dps-header">
+                    <span>Ball</span>
+                    <span>DPS</span>
+                    <span>Best</span>
+                  </div>
+                  <div id="stats-info-dps-list" class="stats-info-dps-list"></div>
+                </div>
+                <div class="stats-info-section">
+                  <div class="stats-info-section-title">Clears Info</div>
+                  <div class="stats-info-kv-list">
+                    <div class="stats-info-kv-row">
+                      <span class="stats-info-kv-label">Time In Clears Reset</span>
+                      <span id="stats-info-clears-time" class="stats-info-kv-value">-</span>
+                    </div>
+                    <div class="stats-info-kv-row">
+                      <span class="stats-info-kv-label">Clears/sec</span>
+                      <span id="stats-info-clears-per-sec" class="stats-info-kv-value">0.00</span>
+                    </div>
+                    <div class="stats-info-kv-row">
+                      <span class="stats-info-kv-label">Best Clears Gain</span>
+                      <span id="stats-info-clears-best-gain" class="stats-info-kv-value">0</span>
+                    </div>
+                  </div>
+                </div>
+                <div class="stats-info-section">
+                  <div class="stats-info-section-title">Stars Info</div>
+                  <div class="stats-info-kv-list">
+                    <div class="stats-info-kv-row">
+                      <span class="stats-info-kv-label">Time In Stars Reset</span>
+                      <span id="stats-info-stars-time" class="stats-info-kv-value">-</span>
+                    </div>
+                    <div class="stats-info-kv-row">
+                      <span class="stats-info-kv-label">Stars/sec</span>
+                      <span id="stats-info-stars-per-sec" class="stats-info-kv-value">0.00</span>
+                    </div>
+                    <div class="stats-info-kv-row">
+                      <span class="stats-info-kv-label">Best Stars Gain</span>
+                      <span id="stats-info-stars-best-gain" class="stats-info-kv-value">0</span>
+                    </div>
+                  </div>
+                </div>
+                <div class="stats-info-section">
+                  <div class="stats-info-section-title">Progress Info</div>
+                  <div class="stats-info-kv-list">
+                    <div class="stats-info-kv-row">
+                      <span class="stats-info-kv-label">Current Level</span>
+                      <span id="stats-info-level-current" class="stats-info-kv-value">1</span>
+                    </div>
+                    <div class="stats-info-kv-row">
+                      <span class="stats-info-kv-label">Highest Level</span>
+                      <span id="stats-info-level-best" class="stats-info-kv-value">1</span>
+                    </div>
+                    <div class="stats-info-kv-row">
+                      <span class="stats-info-kv-label">Levels/sec</span>
+                      <span id="stats-info-levels-per-sec" class="stats-info-kv-value">0.00</span>
+                    </div>
+                    <div class="stats-info-kv-row">
+                      <span class="stats-info-kv-label">Levels/min</span>
+                      <span id="stats-info-levels-per-min" class="stats-info-kv-value">0.00</span>
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>

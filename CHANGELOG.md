@@ -3,6 +3,10 @@
 ## V0.2.5
 - Unreleased.
 - DPS stats now track real damage per second (10s window) instead of kills.
+- Added a Stats & Info modal with DPS sorted by ball type.
+- Stats & Info now shows total DPS and best DPS per ball type (saved).
+- Stats & Info now includes clears/stars reset timers, rates, and best gains.
+- Stats & Info now shows current/highest level plus levels per second/minute.
 
 ## V0.2.4
 - Buffer Overflow star upgrade (Tier 4).

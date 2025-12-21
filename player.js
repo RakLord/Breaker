@@ -67,6 +67,7 @@ export function createDefaultPlayer() {
       prestiges: 0,
       lastGain: 0,
       bestGain: 0,
+      lastPrestigeAt: Date.now(),
     },
     starStats: {
       prestiges: 0,
@@ -74,6 +75,10 @@ export function createDefaultPlayer() {
       spentTotal: 0,
       lastPrestigeLevel: null,
       lastPrestigeAt: Date.now(),
+      bestGain: 0,
+    },
+    stats: {
+      bestDpsByType: {},
     },
     clearsBuffered: 0,
     clearsBufferedBricks: 0,
@@ -121,6 +126,7 @@ export function createDefaultPlayer() {
     progress: {
       level: 1,
       masterSeed: (Math.random() * 2 ** 32) >>> 0,
+      bestLevel: 1,
     },
     map: {
       pattern: "noise",
@@ -202,6 +208,9 @@ export function normalizePlayer(raw) {
     prestiges: Math.max(0, (rawClearsStats.prestiges ?? 0) | 0),
     lastGain: Math.max(0, (rawClearsStats.lastGain ?? 0) | 0),
     bestGain: Math.max(0, (rawClearsStats.bestGain ?? 0) | 0),
+    lastPrestigeAt: Number.isFinite(rawClearsStats.lastPrestigeAt)
+      ? rawClearsStats.lastPrestigeAt
+      : base.clearsStats.lastPrestigeAt,
   };
 
   const rawStarStats = raw.starStats && typeof raw.starStats === "object" ? raw.starStats : {};
@@ -211,8 +220,21 @@ export function normalizePlayer(raw) {
     spentTotal: Math.max(0, (rawStarStats.spentTotal ?? 0) | 0),
     lastPrestigeLevel: Number.isFinite(rawStarStats.lastPrestigeLevel) ? rawStarStats.lastPrestigeLevel : null,
     lastPrestigeAt: Number.isFinite(rawStarStats.lastPrestigeAt) ? rawStarStats.lastPrestigeAt : base.starStats.lastPrestigeAt,
+    bestGain: Math.max(0, (rawStarStats.bestGain ?? 0) | 0),
   };
   starStats.earnedTotal = Math.max(starStats.earnedTotal, stars + starStats.spentTotal);
+
+  const rawStats = raw.stats && typeof raw.stats === "object" ? raw.stats : {};
+  const rawBestDpsByType =
+    rawStats.bestDpsByType && typeof rawStats.bestDpsByType === "object" ? rawStats.bestDpsByType : {};
+  const bestDpsByType = {};
+  for (const [key, value] of Object.entries(rawBestDpsByType)) {
+    if (!key) continue;
+    const num = Number(value);
+    if (!Number.isFinite(num)) continue;
+    bestDpsByType[key] = Math.max(0, num);
+  }
+  const stats = { bestDpsByType };
 
   const rawClearsUpgrades = raw.clearsUpgrades && typeof raw.clearsUpgrades === "object" ? raw.clearsUpgrades : {};
   const densityLevel = Math.max(0, (rawClearsUpgrades.densityLevel ?? 0) | 0);
@@ -295,6 +317,8 @@ export function normalizePlayer(raw) {
 
   const rawProgress = raw.progress && typeof raw.progress === "object" ? raw.progress : {};
   const level = Math.max(1, (rawProgress.level ?? 1) | 0);
+  const bestLevelRaw = Math.max(1, (rawProgress.bestLevel ?? base.progress.bestLevel ?? 1) | 0);
+  const bestLevel = Math.max(level, bestLevelRaw);
   const masterSeed = Number.isFinite(rawProgress.masterSeed)
     ? (rawProgress.masterSeed >>> 0)
     : Number.isFinite(seed)
@@ -341,6 +365,7 @@ export function normalizePlayer(raw) {
     stars,
     clearsStats,
     starStats,
+    stats,
     clearsBuffered,
     clearsBufferedBricks,
     clearsUpgrades: { densityLevel, gridSizeLevel, brickHpLevel },
@@ -351,7 +376,7 @@ export function normalizePlayer(raw) {
       noiseThreshold,
       desiredCellSize,
     },
-    progress: { level, masterSeed },
+    progress: { level, masterSeed, bestLevel },
     map: { pattern, seed },
     game: { balls, grid, initialBlocks },
     tutorials,

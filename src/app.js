@@ -91,6 +91,7 @@ export function startApp() {
     hardResetBtn,
     clearsShopBtn,
     starBoardBtn,
+    statsInfoBtn,
     settingsBtn,
     ballContextBtn,
     hpOverlayBtn,
@@ -195,6 +196,20 @@ export function startApp() {
     exportImportBtn,
     exportImportModal,
     exportImportCloseBtn,
+    statsInfoModal,
+    statsInfoCloseBtn,
+    statsInfoTotalDpsEl,
+    statsInfoDpsListEl,
+    statsInfoClearsTimeEl,
+    statsInfoClearsPerSecEl,
+    statsInfoClearsBestGainEl,
+    statsInfoStarsTimeEl,
+    statsInfoStarsPerSecEl,
+    statsInfoStarsBestGainEl,
+    statsInfoLevelCurrentEl,
+    statsInfoLevelBestEl,
+    statsInfoLevelsPerSecEl,
+    statsInfoLevelsPerMinEl,
     settingsModal,
     settingsCloseBtn,
     toastContainer,
@@ -260,6 +275,7 @@ export function startApp() {
   ensureGenerationSettings(player);
   ensureClearsUpgrades(player);
   syncUiStateFromPlayer();
+  ensureBestDpsByType();
   window.player = player;
 
   const game = {
@@ -468,6 +484,7 @@ export function startApp() {
     }
     player.clearsStats.lastGain = gain;
     player.clearsStats.bestGain = Math.max(player.clearsStats.bestGain ?? 0, gain);
+    player.clearsStats.lastPrestigeAt = Date.now();
     if (gain > 0) addClears(player, D(gain));
     player.clearsBuffered = 0;
     player.clearsBufferedBricks = 0;
@@ -509,11 +526,14 @@ export function startApp() {
 
   function ensureClearsStats() {
     if (!player.clearsStats || typeof player.clearsStats !== "object") {
-      player.clearsStats = { prestiges: 0, lastGain: 0, bestGain: 0 };
+      player.clearsStats = { prestiges: 0, lastGain: 0, bestGain: 0, lastPrestigeAt: Date.now() };
     }
     player.clearsStats.prestiges = Math.max(0, (player.clearsStats.prestiges ?? 0) | 0);
     player.clearsStats.lastGain = Math.max(0, (player.clearsStats.lastGain ?? 0) | 0);
     player.clearsStats.bestGain = Math.max(0, (player.clearsStats.bestGain ?? 0) | 0);
+    player.clearsStats.lastPrestigeAt = Number.isFinite(player.clearsStats.lastPrestigeAt)
+      ? player.clearsStats.lastPrestigeAt
+      : Date.now();
     if (!Number.isFinite(player.clearsBufferedBricks)) player.clearsBufferedBricks = 0;
     player.clearsBufferedBricks = Math.max(0, player.clearsBufferedBricks | 0);
   }
@@ -584,6 +604,7 @@ export function startApp() {
     const keepStarStats = { ...(player.starStats ?? {}) };
     const keepManualBallToastShown = !!player.tutorials?.manualBallToastShown;
     const keepUiState = player.ui && typeof player.ui === "object" ? { ...player.ui } : null;
+    const keepBestLevel = Math.max(1, (player.progress?.bestLevel ?? player.progress?.level ?? 1) | 0);
     const preservedBalls = keepBalls
       ? game.balls.filter((ball) => !ball.data?.isCursorBall)
       : [];
@@ -621,6 +642,7 @@ export function startApp() {
     keepStarStats.earnedTotal = Math.max(0, (keepStarStats.earnedTotal ?? 0) | 0) + gain;
     keepStarStats.lastPrestigeLevel = player.progress?.level ?? null;
     keepStarStats.lastPrestigeAt = Date.now();
+    keepStarStats.bestGain = Math.max(0, Math.max(keepStarStats.bestGain ?? 0, gain));
 
     player = normalizePlayer(createDefaultPlayer());
     player.stars = keepStars;
@@ -639,6 +661,7 @@ export function startApp() {
     ensureProgress();
     player.progress.level = 1;
     player.progress.masterSeed = (Math.random() * 2 ** 32) >>> 0;
+    player.progress.bestLevel = Math.max(player.progress.bestLevel ?? 1, keepBestLevel);
 
     updateGridFromPlayer();
     window.player = player;
@@ -717,6 +740,15 @@ export function startApp() {
     settingsModal.setAttribute("aria-hidden", "false");
   }
 
+  function openStatsInfoModal() {
+    if (!statsInfoModal) return;
+    statsInfoModal.classList.remove("hidden");
+    statsInfoModal.setAttribute("aria-hidden", "false");
+    updateStatsInfoDpsList();
+    updateStatsInfoResetStats();
+    updateStatsInfoProgressStats();
+  }
+
   function closeStarsModal() {
     if (!starsModal) return;
     starsModal.classList.add("hidden");
@@ -727,6 +759,12 @@ export function startApp() {
     if (!settingsModal) return;
     settingsModal.classList.add("hidden");
     settingsModal.setAttribute("aria-hidden", "true");
+  }
+
+  function closeStatsInfoModal() {
+    if (!statsInfoModal) return;
+    statsInfoModal.classList.add("hidden");
+    statsInfoModal.setAttribute("aria-hidden", "true");
   }
 
   function openExportImportModal() {
@@ -745,6 +783,139 @@ export function startApp() {
     if (!exportImportModal) return;
     exportImportModal.classList.add("hidden");
     exportImportModal.setAttribute("aria-hidden", "true");
+  }
+
+  function formatDurationShort(elapsedMs) {
+    if (!Number.isFinite(elapsedMs)) return "-";
+    const totalSec = Math.max(0, Math.floor(elapsedMs / 1000));
+    const hours = Math.floor(totalSec / 3600);
+    const mins = Math.floor((totalSec % 3600) / 60);
+    const secs = totalSec % 60;
+    if (hours > 0) return `${hours}h ${mins}m`;
+    if (mins > 0) return `${mins}m ${secs}s`;
+    return `${secs}s`;
+  }
+
+  function ensureBestDpsByType() {
+    if (!player.stats || typeof player.stats !== "object") player.stats = {};
+    if (!player.stats.bestDpsByType || typeof player.stats.bestDpsByType !== "object") {
+      player.stats.bestDpsByType = {};
+    }
+    for (const typeId of Object.keys(BALL_TYPES)) {
+      const best = player.stats.bestDpsByType[typeId];
+      if (!Number.isFinite(best) || best < 0) player.stats.bestDpsByType[typeId] = 0;
+    }
+    return player.stats.bestDpsByType;
+  }
+
+  function updateStatsInfoDpsList() {
+    if (!statsInfoDpsListEl && !statsInfoTotalDpsEl) return;
+    const bestByType = ensureBestDpsByType();
+    let totalDps = 0;
+    const entries = Object.keys(BALL_TYPES).map((typeId) => {
+      const type = BALL_TYPES[typeId] ?? { name: typeId };
+      const dpsRaw = dpsStats.dpsByType[typeId] ?? 0;
+      const dps = Number.isFinite(dpsRaw) ? dpsRaw : 0;
+      totalDps += dps;
+      return {
+        typeId,
+        name: type.name ?? typeId,
+        dps,
+        best: Number.isFinite(bestByType[typeId]) ? bestByType[typeId] : 0,
+      };
+    });
+    entries.sort((a, b) => {
+      const diff = b.dps - a.dps;
+      if (Math.abs(diff) > 1e-9) return diff;
+      return a.name.localeCompare(b.name);
+    });
+
+    if (statsInfoTotalDpsEl) statsInfoTotalDpsEl.textContent = totalDps.toFixed(2);
+    if (!statsInfoDpsListEl) return;
+    statsInfoDpsListEl.innerHTML = entries
+      .map(
+        (entry) => `
+          <div class="stats-info-dps-row" data-type="${entry.typeId}">
+            <span class="stats-info-dps-name">${entry.name}</span>
+            <span class="stats-info-dps-value">${entry.dps.toFixed(2)}</span>
+            <span class="stats-info-dps-value">${entry.best.toFixed(2)}</span>
+          </div>
+        `
+      )
+      .join("");
+  }
+
+  function updateStatsInfoResetStats() {
+    if (
+      !statsInfoClearsTimeEl &&
+      !statsInfoClearsPerSecEl &&
+      !statsInfoClearsBestGainEl &&
+      !statsInfoStarsTimeEl &&
+      !statsInfoStarsPerSecEl &&
+      !statsInfoStarsBestGainEl
+    ) {
+      return;
+    }
+    ensureClearsStats();
+    ensureStarsState();
+    const now = Date.now();
+
+    const clearsLastAt = player.clearsStats?.lastPrestigeAt;
+    const clearsElapsedSec = Number.isFinite(clearsLastAt) ? Math.max(0, (now - clearsLastAt) / 1000) : null;
+    const buffered = Math.max(0, (player.clearsBuffered ?? 0) | 0);
+    const bufferedBricks = Math.max(0, (player.clearsBufferedBricks ?? 0) | 0);
+    const hasLogBoost = getStarUpgradeOwned("clearsLogMult");
+    const mult = hasLogBoost ? Math.max(1, Math.log(Math.max(1, bufferedBricks))) : 1;
+    const gain = buffered > 0 ? Math.max(0, Math.floor(buffered * mult)) : 0;
+    const clearsPerSec = clearsElapsedSec && clearsElapsedSec > 0 ? gain / clearsElapsedSec : 0;
+
+    if (statsInfoClearsTimeEl) {
+      statsInfoClearsTimeEl.textContent = clearsElapsedSec === null ? "-" : formatDurationShort(clearsElapsedSec * 1000);
+    }
+    if (statsInfoClearsPerSecEl) statsInfoClearsPerSecEl.textContent = clearsPerSec.toFixed(2);
+    if (statsInfoClearsBestGainEl) {
+      const bestGain = Math.max(0, (player.clearsStats?.bestGain ?? 0) | 0);
+      statsInfoClearsBestGainEl.textContent = formatInt(bestGain);
+    }
+
+    const starsLastAt = player.starStats?.lastPrestigeAt;
+    const starsElapsedSec = Number.isFinite(starsLastAt) ? Math.max(0, (now - starsLastAt) / 1000) : null;
+    const potentialStarGain = canStarPrestige() ? getStarPrestigeGain() : 0;
+    const starsPerSec = starsElapsedSec && starsElapsedSec > 0 ? potentialStarGain / starsElapsedSec : 0;
+
+    if (statsInfoStarsTimeEl) {
+      statsInfoStarsTimeEl.textContent = starsElapsedSec === null ? "-" : formatDurationShort(starsElapsedSec * 1000);
+    }
+    if (statsInfoStarsPerSecEl) statsInfoStarsPerSecEl.textContent = starsPerSec.toFixed(2);
+    if (statsInfoStarsBestGainEl) {
+      const bestGain = Math.max(0, (player.starStats?.bestGain ?? 0) | 0);
+      statsInfoStarsBestGainEl.textContent = formatInt(bestGain);
+    }
+  }
+
+  function updateStatsInfoProgressStats() {
+    if (
+      !statsInfoLevelCurrentEl &&
+      !statsInfoLevelBestEl &&
+      !statsInfoLevelsPerSecEl &&
+      !statsInfoLevelsPerMinEl
+    ) {
+      return;
+    }
+    ensureProgress();
+    ensureClearsStats();
+    const level = player.progress?.level ?? 1;
+    const bestLevel = player.progress?.bestLevel ?? level;
+    const clearsLastAt = player.clearsStats?.lastPrestigeAt;
+    const elapsedSec = Number.isFinite(clearsLastAt) ? Math.max(0, (Date.now() - clearsLastAt) / 1000) : null;
+    const levelsGained = Math.max(0, level - 1);
+    const levelsPerSec = elapsedSec && elapsedSec > 0 ? levelsGained / elapsedSec : 0;
+    const levelsPerMin = levelsPerSec * 60;
+
+    if (statsInfoLevelCurrentEl) statsInfoLevelCurrentEl.textContent = String(level);
+    if (statsInfoLevelBestEl) statsInfoLevelBestEl.textContent = String(bestLevel);
+    if (statsInfoLevelsPerSecEl) statsInfoLevelsPerSecEl.textContent = levelsPerSec.toFixed(2);
+    if (statsInfoLevelsPerMinEl) statsInfoLevelsPerMinEl.textContent = levelsPerMin.toFixed(2);
   }
 
   async function copyExportString() {
@@ -825,6 +996,7 @@ export function startApp() {
   });
   clearsShopBtn?.addEventListener("click", openClearsModal);
   starBoardBtn?.addEventListener("click", openStarsModal);
+  statsInfoBtn?.addEventListener("click", openStatsInfoModal);
   settingsBtn?.addEventListener("click", openSettingsModal);
   ballContextBtn?.addEventListener("click", () => {
     state.ballContextEnabled = !state.ballContextEnabled;
@@ -863,6 +1035,11 @@ export function startApp() {
   settingsModal?.addEventListener("click", (e) => {
     const target = e.target;
     if (target?.dataset?.action === "close") closeSettingsModal();
+  });
+  statsInfoCloseBtn?.addEventListener("click", closeStatsInfoModal);
+  statsInfoModal?.addEventListener("click", (e) => {
+    const target = e.target;
+    if (target?.dataset?.action === "close") closeStatsInfoModal();
   });
   starsPrestigeBtn?.addEventListener("click", () => {
     const did = starPrestigeNow();
@@ -1189,10 +1366,17 @@ export function startApp() {
     savePlayerNow({ silent: true });
   }, 15000);
   setInterval(() => {
+    const bestByType = ensureBestDpsByType();
     for (const typeId of Object.keys(BALL_TYPES)) {
       const damage = dpsStats.damageByType[typeId] ?? 0;
-      dpsStats.dpsByType[typeId] = damage / DPS_WINDOW_SECONDS;
+      const dps = damage / DPS_WINDOW_SECONDS;
+      dpsStats.dpsByType[typeId] = dps;
       dpsStats.damageByType[typeId] = 0;
+      const prevBest = bestByType[typeId] ?? 0;
+      if (dps > prevBest) bestByType[typeId] = dps;
+    }
+    if (statsInfoModal && !statsInfoModal.classList.contains("hidden")) {
+      updateStatsInfoDpsList();
     }
   }, DPS_WINDOW_MS);
 
@@ -1227,6 +1411,7 @@ export function startApp() {
     if (aliveBlocks === 0) {
       ensureProgress();
       player.progress.level += 1;
+      player.progress.bestLevel = Math.max(player.progress.bestLevel ?? 1, player.progress.level);
       ensureClearsStats();
       player.clearsBuffered = Math.max(0, (player.clearsBuffered ?? 0) | 0) + 1;
       player.clearsBufferedBricks = Math.max(0, (player.clearsBufferedBricks ?? 0) | 0) + (state.initialBlocks | 0);
@@ -1274,6 +1459,10 @@ export function startApp() {
 
     updateBallShopCards(ballShopCtx);
     maybeShowManualBallToast(aliveBlocks);
+    if (statsInfoModal && !statsInfoModal.classList.contains("hidden")) {
+      updateStatsInfoResetStats();
+      updateStatsInfoProgressStats();
+    }
 
     const clearsNow = getClears(player);
     if (clearsShopBtn) {
@@ -1448,18 +1637,8 @@ export function startApp() {
       if (starsStatsLine3El) starsStatsLine3El.textContent = `${earned}`;
       if (starsStatsLine4El) {
         const lastAt = player.starStats?.lastPrestigeAt;
-        const elapsedMs = Number.isFinite(lastAt) ? Math.max(0, Date.now() - lastAt) : null;
-        const totalSec = elapsedMs === null ? null : Math.floor(elapsedMs / 1000);
-        const hours = totalSec === null ? 0 : Math.floor(totalSec / 3600);
-        const mins = totalSec === null ? 0 : Math.floor((totalSec % 3600) / 60);
-        const secs = totalSec === null ? 0 : totalSec % 60;
-        let text = "-";
-        if (totalSec !== null) {
-          if (hours > 0) text = `${hours}h ${mins}m`;
-          else if (mins > 0) text = `${mins}m ${secs}s`;
-          else text = `${secs}s`;
-        }
-        starsStatsLine4El.textContent = text;
+        const elapsedMs = Number.isFinite(lastAt) ? Math.max(0, Date.now() - lastAt) : NaN;
+        starsStatsLine4El.textContent = formatDurationShort(elapsedMs);
       }
     }
 

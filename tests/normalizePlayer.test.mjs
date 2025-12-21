@@ -24,6 +24,44 @@ function testBallListCap() {
   assert(player.game.balls.length === MAX_SAVED_BALLS, "ball list should be capped");
 }
 
+function testBestDpsStats() {
+  const player = normalizePlayer({
+    stats: {
+      bestDpsByType: {
+        normal: 12.5,
+        splash: -3,
+        heavy: "nope",
+      },
+    },
+  });
+  const best = player.stats?.bestDpsByType ?? {};
+  assert(best.normal === 12.5, "best dps should keep valid values");
+  assert(best.splash === 0, "best dps should clamp negative values to 0");
+  assert(!("heavy" in best), "best dps should ignore non-numeric values");
+}
+
+function testResetStats() {
+  const player = normalizePlayer({
+    clearsStats: { prestiges: 2, lastGain: 4, bestGain: 10, lastPrestigeAt: "nope" },
+    starStats: {
+      prestiges: 1,
+      earnedTotal: 5,
+      spentTotal: 2,
+      lastPrestigeLevel: 40,
+      lastPrestigeAt: "nope",
+      bestGain: -7,
+    },
+  });
+  assert(Number.isFinite(player.clearsStats.lastPrestigeAt), "clears last prestige time should be valid");
+  assert(Number.isFinite(player.starStats.lastPrestigeAt), "stars last prestige time should be valid");
+  assert(player.starStats.bestGain === 0, "star best gain should clamp to 0");
+}
+
+function testProgressBestLevel() {
+  const player = normalizePlayer({ progress: { level: 5, bestLevel: 2 } });
+  assert(player.progress.bestLevel === 5, "best level should be at least current level");
+}
+
 function testUpgradeMultipliers() {
   const player = createDefaultPlayer();
   player.ballTypes.normal = {
@@ -43,6 +81,9 @@ function testUpgradeMultipliers() {
 
 testNormalizeInvalidPoints();
 testBallListCap();
+testBestDpsStats();
+testResetStats();
+testProgressBestLevel();
 testUpgradeMultipliers();
 
 console.log("normalizePlayer tests passed");

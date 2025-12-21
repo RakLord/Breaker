@@ -123,6 +123,7 @@ export function ensureStarsState(player) {
       spentTotal: 0,
       lastPrestigeLevel: null,
       lastPrestigeAt: Date.now(),
+      bestGain: 0,
     };
   }
   player.starStats.prestiges = Math.max(0, (player.starStats.prestiges ?? 0) | 0);
@@ -134,6 +135,7 @@ export function ensureStarsState(player) {
   player.starStats.lastPrestigeAt = Number.isFinite(player.starStats.lastPrestigeAt)
     ? player.starStats.lastPrestigeAt
     : Date.now();
+  player.starStats.bestGain = Math.max(0, (player.starStats.bestGain ?? 0) | 0);
   player.starStats.earnedTotal = Math.max(player.starStats.earnedTotal, player.stars + player.starStats.spentTotal);
   return player.starUpgrades;
 }
