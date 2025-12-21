@@ -116,7 +116,7 @@ body {
   left: 50%;
   right: auto;
   bottom: 0;
-  width: 70vw;
+  width: 50vw;
   max-width: 100%;
   padding: 10px 12px calc(12px + env(safe-area-inset-bottom));
   background: linear-gradient(180deg, rgba(10, 16, 30, 0.78), rgba(6, 10, 20, 0.95));
@@ -298,6 +298,26 @@ header h1 {
   display: flex;
   flex-direction: column;
   gap: 12px;
+}
+
+@media (min-width: 1700px) {
+  #game-root {
+    grid-template-columns: 560px 1fr;
+  }
+
+  #sidebar {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  #points {
+    grid-column: 1 / -1;
+  }
+
+  #ball-list {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-column: 1 / -1;
+  }
 }
 
 #hud-level {
